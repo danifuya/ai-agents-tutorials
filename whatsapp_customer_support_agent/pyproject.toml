@@ -1,0 +1,31 @@
+[project]
+name = "whatsapp-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.12",
+    "graphviz==0.20.1",
+    "httpx>=0.28.1",
+    "ipykernel>=6.29.5",
+    "ipython>=9.0.2",
+    "langchain>=0.3.23",
+    "langchain-community>=0.0.27",
+    "langchain-openai>=0.2.1",
+    "langgraph>=0.0.15",
+    "langgraph-checkpoint-postgres>=2.0.19",
+    "langgraph-cli[inmem]>=0.1.83",
+    "logfire[fastapi]>=3.12.0",
+    "openai>=1.70.0",
+    "pandas>=2.2.3",
+    "psycopg2-binary>=2.9.10",
+    "pydantic-ai>=0.0.51",
+    "pykernel>=0.1.6",
+    "python-dotenv>=1.0.1",
+    "sqlalchemy>=2.0.40",
+    "tavily-python>=0.3.1",
+    "uvicorn>=0.34.0",
+]
+[tool.setuptools]
+packages = ["api", "data", "agents", "database"]
