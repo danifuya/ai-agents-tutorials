@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+google-api-python-client
+python-dotenv
+pandas
+google-auth
+requests
+nest-asyncio
+python-pptx

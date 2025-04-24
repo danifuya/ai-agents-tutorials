@@ -1,0 +1,6 @@
+campaign_id,influencer_handle,total_posts,total_impressions,total_reach,total_engagements,avg_engagement_rate,yt_posts,yt_impressions,yt_reach,yt_likes_comments,yt_eng_rate,ig_posts,ig_impressions,ig_reach,ig_likes_comments,ig_eng_rate,tt_posts,tt_impressions,tt_reach,tt_likes_comments,tt_eng_rate
+C001,@alex_tech,3,75000,58500,4497,0.0769,1,25000,18500,1285,0.0695,1,15000,12000,892,0.0743,1,35000,28000,2320,0.0829
+C001,@maria_style,3,85000,71000,5980,0.0842,1,18000,15000,805,0.0537,1,22000,18000,1495,0.0831,1,45000,38000,3680,0.0968
+C001,@tech_guru,3,72000,56500,4650,0.0823,1,32000,24000,1910,0.0796,1,12000,9500,685,0.0721,1,28000,23000,2055,0.0893
+C002,@fitness_pro,3,135000,115000,9675,0.0841,1,42000,35000,2645,0.0756,1,38000,32000,2320,0.0725,1,55000,48000,4710,0.0981
+C002,@travel_addict,3,98000,84500,6945,0.0822,1,22000,18500,1015,0.0549,1,28000,24000,1945,0.081,1,48000,42000,3985,0.0949

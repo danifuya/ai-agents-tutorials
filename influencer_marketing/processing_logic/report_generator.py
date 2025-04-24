@@ -1,0 +1,723 @@
+import pandas as pd
+from pptx import Presentation
+from pptx.util import Inches, Pt
+import os
+import io
+
+try:
+    from lxml import etree
+
+    LXML_AVAILABLE = True
+except ImportError:
+    LXML_AVAILABLE = False
+    print(
+        "Warning: lxml library not found. Table cell border styling cannot be copied."
+    )
+
+from pptx.shapes.autoshape import Shape
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pptx.shapes.base import BaseShape
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN
+from pptx.enum.dml import MSO_FILL_TYPE, MSO_THEME_COLOR
+from pptx.table import Table
+
+
+def copy_fill_properties(source, target):
+    """Utility function to copy fill properties between shapes."""
+    if not (hasattr(source, "fill") and hasattr(target, "fill")):
+        return
+
+    try:
+        fill_type = source.fill.type
+
+        # Set fill type first
+        if fill_type == MSO_FILL_TYPE.BACKGROUND:
+            target.fill.background()
+        elif fill_type == MSO_FILL_TYPE.SOLID:
+            target.fill.solid()
+
+            # Copy RGB color if available
+            if (
+                hasattr(source.fill.fore_color, "rgb")
+                and source.fill.fore_color.rgb is not None
+            ):
+                target.fill.fore_color.rgb = source.fill.fore_color.rgb
+            # Copy theme color if available
+            elif (
+                hasattr(source.fill.fore_color, "theme_color")
+                and source.fill.fore_color.theme_color is not None
+            ):
+                target.fill.fore_color.theme_color = source.fill.fore_color.theme_color
+                if hasattr(source.fill.fore_color, "brightness"):
+                    target.fill.fore_color.brightness = (
+                        source.fill.fore_color.brightness
+                    )
+
+        # Copy transparency
+        if hasattr(source.fill, "transparency"):
+            target.fill.transparency = source.fill.transparency
+    except Exception as e:
+        print(f"Error copying fill properties: {e}")
+
+
+def copy_line_properties(source, target):
+    """Utility function to copy line/border properties between shapes."""
+    if not (hasattr(source, "line") and hasattr(target, "line")):
+        return
+
+    try:
+        # Set line width
+        if hasattr(source.line, "width"):
+            target.line.width = source.line.width
+
+        # Set dash style if available
+        if hasattr(source.line, "dash_style"):
+            target.line.dash_style = source.line.dash_style
+
+        # Copy line fill properties
+        if hasattr(source.line, "fill") and hasattr(target.line, "fill"):
+            line_fill_type = source.line.fill.type
+
+            if line_fill_type == MSO_FILL_TYPE.BACKGROUND:
+                target.line.fill.background()
+            elif line_fill_type == MSO_FILL_TYPE.SOLID:
+                target.line.fill.solid()
+
+                # Handle RGB color
+                if (
+                    hasattr(source.line.fill.fore_color, "rgb")
+                    and source.line.fill.fore_color.rgb is not None
+                ):
+                    target.line.fill.fore_color.rgb = source.line.fill.fore_color.rgb
+                # Handle theme color
+                elif (
+                    hasattr(source.line.fill.fore_color, "theme_color")
+                    and source.line.fill.fore_color.theme_color is not None
+                ):
+                    target.line.fill.fore_color.theme_color = (
+                        source.line.fill.fore_color.theme_color
+                    )
+                    if hasattr(source.line.fill.fore_color, "brightness"):
+                        target.line.fill.fore_color.brightness = (
+                            source.line.fill.fore_color.brightness
+                        )
+    except Exception as e:
+        print(f"Error copying line properties: {e}")
+
+
+def copy_font_properties(source_font, target_font):
+    """Utility function to copy font properties between runs."""
+    if source_font is None or target_font is None:
+        return
+
+    # Copy basic font properties
+    for attr in ["name", "size", "bold", "italic", "underline"]:
+        if hasattr(source_font, attr):
+            try:
+                setattr(target_font, attr, getattr(source_font, attr))
+            except Exception:
+                pass
+
+    # Copy color properties
+    try:
+        # Copy RGB color
+        if hasattr(source_font.color, "rgb") and source_font.color.rgb is not None:
+            target_font.color.rgb = source_font.color.rgb
+        # Copy theme color
+        elif (
+            hasattr(source_font.color, "theme_color")
+            and source_font.color.theme_color is not None
+        ):
+            target_font.color.theme_color = source_font.color.theme_color
+            if hasattr(source_font.color, "brightness"):
+                target_font.color.brightness = source_font.color.brightness
+    except Exception:
+        pass
+
+
+def copy_table_structure(
+    source_table, target_slide, left, top, width, height, row_data=None
+):
+    """Copy table structure and formatting."""
+    if not isinstance(source_table, Table):
+        return None
+
+    try:
+        # Create a new table with the same dimensions
+        rows, cols = len(source_table.rows), len(source_table.columns)
+        target_table = target_slide.shapes.add_table(
+            rows, cols, left, top, width, height
+        ).table
+
+        # Copy table-level properties
+        # (python-pptx doesn't expose many table-level properties)
+
+        # Copy cell properties
+        for i in range(rows):
+            for j in range(cols):
+                source_cell = source_table.cell(i, j)
+                target_cell = target_table.cell(i, j)
+
+                # Copy cell fill
+                copy_fill_properties(source_cell, target_cell)
+
+                # --- Copy Cell Borders ---
+                if LXML_AVAILABLE:
+                    try:
+                        # Access the tcPr element, creating it if it doesn't exist
+                        source_tcPr = source_cell._tc.get_or_add_tcPr()
+                        target_tcPr = target_cell._tc.get_or_add_tcPr()
+
+                        # Define border element tags (a: namespace is common)
+                        nsmap = source_tcPr.nsmap
+                        border_tags = [
+                            f"{{{nsmap['a']}}}lnL",
+                            f"{{{nsmap['a']}}}lnR",
+                            f"{{{nsmap['a']}}}lnT",
+                            f"{{{nsmap['a']}}}lnB",
+                            f"{{{nsmap['a']}}}lnTlToBr",
+                            f"{{{nsmap['a']}}}lnBlToTr",
+                        ]
+
+                        for tag in border_tags:
+                            # Remove existing border element in target if any
+                            existing_target_border = target_tcPr.find(tag)
+                            if existing_target_border is not None:
+                                target_tcPr.remove(existing_target_border)
+
+                            # Find border element in source
+                            source_border_el = source_tcPr.find(tag)
+
+                            # If source border exists, copy it to target
+                            if source_border_el is not None:
+                                # Create a deep copy to avoid modifying the source or issues with shared elements
+                                copied_border_el = etree.fromstring(
+                                    etree.tostring(source_border_el)
+                                )
+                                target_tcPr.append(copied_border_el)
+
+                    except AttributeError:
+                        # This might happen if _tc or get_or_add_tcPr are not available (unlikely for standard tables)
+                        print(
+                            f"Warning: Could not access low-level XML elements (_tc, tcPr) for cell ({i},{j}) borders. Skipping border copy."
+                        )
+                    except Exception as border_e:
+                        # Catch other potential errors during XML manipulation
+                        print(
+                            f"Warning: Error copying cell border properties for cell ({i},{j}): {border_e}"
+                        )
+                # --- End Copy Cell Borders ---
+
+                # Copy text content from the first text frame paragraph
+                if source_cell.text_frame.paragraphs:
+                    source_paragraph = source_cell.text_frame.paragraphs[0]
+
+                    # If we're populating with data and there's a placeholder pattern
+                    if row_data is not None:
+                        cell_text = source_cell.text
+                        # Look for placeholders and replace with data
+                        for col in row_data.keys():
+                            placeholder = f"{{{{{col}}}}}"
+                            if placeholder in cell_text:
+                                cell_text = cell_text.replace(
+                                    placeholder, str(row_data[col])
+                                )
+                        # Trim whitespace from the final cell text
+                        target_cell.text = cell_text.strip()
+                    else:
+                        target_cell.text = source_cell.text.strip()
+
+                    # If we have runs, copy the first run's formatting
+                    if source_paragraph.runs:
+                        source_run = source_paragraph.runs[0]
+                        if target_cell.text_frame.paragraphs:
+                            target_run = (
+                                target_cell.text_frame.paragraphs[0].runs[0]
+                                if target_cell.text_frame.paragraphs[0].runs
+                                else None
+                            )
+                            if target_run:
+                                copy_font_properties(source_run.font, target_run.font)
+
+                # Copy vertical alignment
+                if hasattr(source_cell.text_frame, "vertical_anchor"):
+                    target_cell.text_frame.vertical_anchor = (
+                        source_cell.text_frame.vertical_anchor
+                    )
+
+                # Copy margins
+                for margin_attr in [
+                    "margin_left",
+                    "margin_right",
+                    "margin_top",
+                    "margin_bottom",
+                ]:
+                    if hasattr(source_cell.text_frame, margin_attr):
+                        setattr(
+                            target_cell.text_frame,
+                            margin_attr,
+                            getattr(source_cell.text_frame, margin_attr),
+                        )
+
+        return target_table
+    except Exception as e:
+        print(f"Error copying table: {e}")
+        return None
+
+
+def create_powerpoint_report(
+    summary_csv_path: str,
+    template_pptx_path: str,
+    output_pptx_path: str,
+    template_slide_index: int = 1,
+) -> str | None:
+    """
+    Generates a PowerPoint report from a summary CSV and a template PPTX.
+    It creates one slide per influencer by duplicating and populating the template slide
+    with data from the CSV. Returns the path of the generated file or None on error.
+    """
+    try:
+        # --- 1. Load Data ---
+        print(f"Loading summary data from: {summary_csv_path}")
+        if not os.path.exists(summary_csv_path):
+            print(f"Error: Summary CSV file not found at {summary_csv_path}")
+            return None
+        df_summary = pd.read_csv(summary_csv_path)
+        print(f"Loaded CSV with columns: {df_summary.columns.tolist()}")
+
+        # --- 2. Load Presentation Template ---
+        print(f"Loading template presentation from: {template_pptx_path}")
+        if not os.path.exists(template_pptx_path):
+            print(f"Error: PowerPoint template file not found at {template_pptx_path}")
+            return None
+        prs = Presentation(template_pptx_path)
+        print(f"Loaded presentation with {len(prs.slides)} slides")
+
+        # --- 3. Identify Template Slide Layout ---
+        if len(prs.slides) <= template_slide_index:
+            print(
+                f"Error: Template slide index ({template_slide_index}) is out of bounds..."
+            )
+            return None
+
+        template_slide = prs.slides[template_slide_index]
+        template_slide_layout = template_slide.slide_layout
+        print(f"Using slide index {template_slide_index} as template.")
+
+        # Determine if this is template2 by looking for platform-specific placeholders
+        is_template2 = False
+        for shape in template_slide.shapes:
+            if hasattr(shape, "text_frame") and shape.has_text_frame:
+                for paragraph in shape.text_frame.paragraphs:
+                    text = "".join(run.text for run in paragraph.runs)
+                    if "{{yt_" in text or "{{ig_" in text or "{{tt_" in text:
+                        is_template2 = True
+                        print(
+                            "Detected template2 format with platform-specific placeholders"
+                        )
+                        break
+
+        # Store all template shapes for reference
+        template_shapes = list(template_slide.shapes)
+
+        # --- 4. Generate Slides for Each Influencer ---
+        initial_slide_count = len(prs.slides)
+        print(f"Generating slides for {len(df_summary)} influencers...")
+
+        for index, row in df_summary.iterrows():
+            influencer_handle = row.get("influencer_handle", "Unknown")
+            print(f"  Processing influencer: {influencer_handle}")
+
+            # Create a new slide with the same layout as the template
+            new_slide = prs.slides.add_slide(template_slide_layout)
+
+            # Process each shape from the template
+            for template_shape in template_shapes:
+                new_shape = None
+                try:
+                    # --- Process by shape type ---
+                    if template_shape.shape_type == MSO_SHAPE_TYPE.PLACEHOLDER:
+                        try:
+                            # Try to get the placeholder by index
+                            placeholder_idx = template_shape.placeholder_format.idx
+                            new_shape = new_slide.placeholders[placeholder_idx]
+                        except (AttributeError, KeyError, IndexError):
+                            # If placeholder not found, create appropriate shape type
+                            if template_shape.has_text_frame:
+                                new_shape = new_slide.shapes.add_textbox(
+                                    template_shape.left,
+                                    template_shape.top,
+                                    template_shape.width,
+                                    template_shape.height,
+                                )
+                            elif template_shape.has_table:
+                                # We'll handle tables separately
+                                continue
+                            else:
+                                # Skip other placeholder types we can't handle
+                                continue
+
+                    elif template_shape.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE:
+                        new_shape = new_slide.shapes.add_shape(
+                            template_shape.auto_shape_type,
+                            template_shape.left,
+                            template_shape.top,
+                            template_shape.width,
+                            template_shape.height,
+                        )
+                        # Copy adjustments (e.g., for rounded corners)
+                        if (
+                            hasattr(template_shape, "adjustments")
+                            and len(template_shape.adjustments) > 0
+                        ):
+                            try:
+                                # Iterate and assign adjustments individually
+                                for i in range(len(template_shape.adjustments)):
+                                    new_shape.adjustments[i] = (
+                                        template_shape.adjustments[i]
+                                    )
+                            except Exception as adj_e:
+                                print(
+                                    f"      Warning: Could not copy adjustments: {adj_e}"
+                                )
+
+                    elif template_shape.shape_type == MSO_SHAPE_TYPE.TEXT_BOX:
+                        new_shape = new_slide.shapes.add_textbox(
+                            template_shape.left,
+                            template_shape.top,
+                            template_shape.width,
+                            template_shape.height,
+                        )
+
+                    elif template_shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                        # Copy picture shapes (like logos)
+                        image_stream = io.BytesIO(template_shape.image.blob)
+                        new_shape = new_slide.shapes.add_picture(
+                            image_stream,
+                            template_shape.left,
+                            template_shape.top,
+                            width=template_shape.width,
+                            height=template_shape.height,
+                        )
+                        # Skip further text/formatting for pictures
+                        continue
+
+                    elif template_shape.has_table:
+                        # Handle tables
+                        source_table = template_shape.table
+                        copy_table_structure(
+                            source_table,
+                            new_slide,
+                            template_shape.left,
+                            template_shape.top,
+                            template_shape.width,
+                            template_shape.height,
+                            row,
+                        )
+                        continue  # Skip the rest of processing for tables
+
+                    else:
+                        # Skip unsupported shapes
+                        continue
+
+                    if new_shape is None:
+                        continue
+
+                    # --- Copy appearance properties ---
+                    # Copy fill, line and other formatting
+                    copy_fill_properties(template_shape, new_shape)
+                    copy_line_properties(template_shape, new_shape)
+
+                    # Copy rotation
+                    if hasattr(template_shape, "rotation"):
+                        new_shape.rotation = template_shape.rotation
+
+                    # --- Process text content ---
+                    if template_shape.has_text_frame and new_shape.has_text_frame:
+                        template_tf = template_shape.text_frame
+                        target_tf = new_shape.text_frame
+                        target_tf.clear()  # Clear any default text
+
+                        # --- FIX START: Remove initial empty paragraph if it exists ---
+                        if (
+                            len(target_tf.paragraphs) > 0
+                            and target_tf.paragraphs[0].text == ""
+                        ):
+                            try:
+                                p_element = target_tf.paragraphs[
+                                    0
+                                ]._p  # Access internal element
+                                target_tf._txBody.remove(
+                                    p_element
+                                )  # Remove the empty paragraph element
+                            except Exception as e:
+                                print(
+                                    f"    Warning: Could not remove initial empty paragraph: {e}"
+                                )
+                        # --- FIX END ---
+
+                        # Set text frame properties first
+                        for prop in [
+                            "margin_bottom",
+                            "margin_left",
+                            "margin_right",
+                            "margin_top",
+                            "vertical_anchor",
+                            "word_wrap",
+                            "auto_size",
+                        ]:
+                            if hasattr(template_tf, prop):
+                                try:
+                                    setattr(target_tf, prop, getattr(template_tf, prop))
+                                except:
+                                    pass
+
+                        # Process each paragraph
+                        for p_idx, template_p in enumerate(template_tf.paragraphs):
+                            # Get the original text with placeholders
+                            combined_text = "".join(r.text for r in template_p.runs)
+                            modified_text = combined_text
+
+                            # Special case for {{influencer}} which should map to influencer_handle
+                            if "{{influencer}}" in modified_text:
+                                modified_text = modified_text.replace(
+                                    "{{influencer}}", influencer_handle
+                                )
+
+                            # Check for template2 platform placeholders
+                            if is_template2:
+                                # Handle platform-specific placeholders first
+                                platform_prefixes = ["yt", "ig", "tt"]
+                                metrics = [
+                                    "posts",
+                                    "impressions",
+                                    "reach",
+                                    "likes_comments",
+                                    "eng_rate",
+                                ]
+
+                                for prefix in platform_prefixes:
+                                    for metric in metrics:
+                                        placeholder = f"{{{{{prefix}_{metric}}}}}"
+                                        if placeholder in modified_text:
+                                            column_name = f"{prefix}_{metric}"
+
+                                            if column_name in row:
+                                                value = row[column_name]
+
+                                                # Format values according to metric type
+                                                if metric == "eng_rate":
+                                                    # Format as percentage
+                                                    formatted_value = f"{value:.2%}"
+                                                elif metric in [
+                                                    "impressions",
+                                                    "reach",
+                                                    "likes_comments",
+                                                ]:
+                                                    # Format as numbers with commas
+                                                    formatted_value = f"{int(value):,}"
+                                                else:
+                                                    # Default formatting
+                                                    formatted_value = str(value)
+
+                                                modified_text = modified_text.replace(
+                                                    placeholder, formatted_value
+                                                )
+
+                            # Handle standard placeholders (works for both templates)
+                            for col in df_summary.columns:
+                                tag = f"{{{{{col}}}}}"
+                                if tag in modified_text:
+                                    raw_value = row.get(col, "")
+                                    if isinstance(raw_value, (int, float)):
+                                        if col == "avg_engagement_rate":
+                                            formatted_value = f"{raw_value:.2%}"
+                                        elif (
+                                            "impressions" in col
+                                            or "reach" in col
+                                            or "engagements" in col
+                                            or "posts" in col
+                                        ):
+                                            formatted_value = f"{raw_value:,}"
+                                        else:
+                                            formatted_value = str(raw_value)
+                                    else:
+                                        formatted_value = str(raw_value)
+                                    modified_text = modified_text.replace(
+                                        tag, formatted_value
+                                    )
+
+                            # Create new paragraph and copy formatting
+                            target_p = target_tf.add_paragraph()
+                            target_p.alignment = template_p.alignment
+                            target_p.level = template_p.level
+
+                            # Copy paragraph spacing (skip space_before for the first paragraph)
+                            if (
+                                p_idx > 0
+                                and hasattr(template_p, "space_before")
+                                and template_p.space_before is not None
+                            ):
+                                target_p.space_before = template_p.space_before
+                            if (
+                                hasattr(template_p, "space_after")
+                                and template_p.space_after is not None
+                            ):
+                                target_p.space_after = template_p.space_after
+                            if (
+                                hasattr(template_p, "line_spacing")
+                                and template_p.line_spacing is not None
+                            ):
+                                target_p.line_spacing = template_p.line_spacing
+
+                            # --- Handle text content and formatting ---
+                            # Trim whitespace from the final text *before* adding runs
+                            final_text = modified_text.strip()
+
+                            if template_p.runs:
+                                # Check if we should use a single run for the whole paragraph
+                                if len(template_p.runs) == 1 or all(
+                                    run.text == "" for run in template_p.runs[1:]
+                                ):
+                                    # Use a single run with the template formatting
+                                    template_run = template_p.runs[0]
+                                    new_run = target_p.add_run()
+                                    new_run.text = final_text  # Assign trimmed text
+
+                                    # Copy font formatting
+                                    copy_font_properties(
+                                        template_run.font, new_run.font
+                                    )
+                                else:
+                                    # Multiple runs with different formatting
+                                    # In this case we'll just use the text with the first run's formatting
+                                    template_run = template_p.runs[0]
+                                    new_run = target_p.add_run()
+                                    new_run.text = final_text  # Assign trimmed text
+
+                                    # Copy font formatting from the first run
+                                    copy_font_properties(
+                                        template_run.font, new_run.font
+                                    )
+                            else:
+                                # No runs - just set text directly
+                                target_p.text = final_text  # Assign trimmed text
+
+                except Exception as shape_e:
+                    print(f"    Error processing shape: {shape_e}")
+                    continue  # Continue with the next shape
+
+        # --- 5. Remove Template Slide ---
+        # Get the rId of the template slide (slide at index template_slide_index)
+        xml_slides = prs.slides._sldIdLst
+        if len(xml_slides) > template_slide_index:
+            try:
+                slides = list(xml_slides)
+                idx = template_slide_index  # template slide index
+                rId = prs.slides._sldIdLst[idx].rId
+                # Remove the slide
+                prs.part.drop_rel(rId)
+                xml_slides.remove(slides[idx])
+                print(f"Removed template slide at index {template_slide_index}")
+            except Exception as e:
+                print(f"Error removing template slide: {e}")
+                # It's not critical if this fails; the template slide will just remain in the ppt
+
+        # --- 6. Save the Presentation ---
+        # Create the output directory if it doesn't exist
+        output_dir = os.path.dirname(output_pptx_path)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+
+        prs.save(output_pptx_path)
+        print(f"Presentation saved to {output_pptx_path}")
+        print(
+            f"Created {len(prs.slides) - initial_slide_count + 1} slides for {len(df_summary)} influencers"
+        )
+
+        return output_pptx_path
+
+    except Exception as e:
+        print(f"Error generating PowerPoint report: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return None
+
+
+if __name__ == "__main__":
+    # Test the function with example data
+    from dotenv import load_dotenv
+
+    load_dotenv()  # Load .env file if running directly
+
+    # Determine the project root directory (parent of processing_logic/)
+    project_root = os.path.dirname(os.path.dirname(__file__))
+
+    # Example file paths (adapt as needed)
+    summary_csv_path = os.path.join(
+        project_root, "reports", "generated_campaign_summary.csv"
+    )
+
+    # Look for template2 first, then fall back to regular template
+    template2_path = os.path.join(project_root, "reports", "template", "template2.pptx")
+    template_path = os.path.join(project_root, "reports", "template", "template.pptx")
+
+    if os.path.exists(template2_path):
+        template_pptx_path = template2_path
+        print("Using template2.pptx for the report")
+    else:
+        template_pptx_path = template_path
+        print("Using template.pptx for the report")
+
+    output_pptx_path = os.path.join(project_root, "reports", "generated_report.pptx")
+
+    # Check if inputs exist
+    if not os.path.exists(summary_csv_path):
+        print(f"ERROR: Summary CSV not found at {summary_csv_path}")
+        # Add platform columns for testing if the summary file is missing
+        dummy_data = {
+            "campaign_id": ["c1"],
+            "influencer_handle": ["@infA"],
+            "total_posts": [1],
+            "total_impressions": [1000],
+            "total_reach": [500],
+            "total_engagements": [50],
+            "avg_engagement_rate": [0.1],
+            # Add platform-specific columns for template2
+            "yt_posts": [2],
+            "yt_impressions": [2000],
+            "yt_reach": [1000],
+            "yt_likes_comments": [200],
+            "yt_eng_rate": [0.1],
+            "ig_posts": [3],
+            "ig_impressions": [3000],
+            "ig_reach": [1500],
+            "ig_likes_comments": [300],
+            "ig_eng_rate": [0.1],
+            "tt_posts": [4],
+            "tt_impressions": [4000],
+            "tt_reach": [2000],
+            "tt_likes_comments": [400],
+            "tt_eng_rate": [0.1],
+        }
+        os.makedirs(os.path.dirname(summary_csv_path), exist_ok=True)
+        pd.DataFrame(dummy_data).to_csv(summary_csv_path, index=False)
+        print(f"Created dummy summary file at {summary_csv_path}")
+
+    elif not os.path.exists(template_pptx_path):
+        print(f"ERROR: Template not found at {template_pptx_path}")
+    else:
+        print(f"Generating PowerPoint report using {summary_csv_path}...")
+        result_path = create_powerpoint_report(
+            summary_csv_path=summary_csv_path,
+            template_pptx_path=template_pptx_path,
+            output_pptx_path=output_pptx_path,
+            template_slide_index=1,  # Assuming the template slide is at index 1 (second slide)
+        )
+
+        if result_path:
+            print(f"✅ Successfully generated report at: {result_path}")
+        else:
+            print("❌ Failed to generate report.")
