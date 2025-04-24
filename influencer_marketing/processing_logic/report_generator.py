@@ -1,26 +1,9 @@
 import pandas as pd
 from pptx import Presentation
-from pptx.util import Inches, Pt
 import os
 import io
-
-try:
-    from lxml import etree
-
-    LXML_AVAILABLE = True
-except ImportError:
-    LXML_AVAILABLE = False
-    print(
-        "Warning: lxml library not found. Table cell border styling cannot be copied."
-    )
-
-from pptx.shapes.autoshape import Shape
 from pptx.enum.shapes import MSO_SHAPE_TYPE
-from pptx.shapes.base import BaseShape
-from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
 from pptx.enum.dml import MSO_FILL_TYPE
-from pptx.table import Table
 
 
 def copy_fill_properties(source, target):
