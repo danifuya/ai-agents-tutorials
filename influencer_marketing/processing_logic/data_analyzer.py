@@ -23,11 +23,16 @@ def create_campaign_summary(campaign_content_csv_path: str) -> pd.DataFrame | No
 
         df_content = pd.read_csv(campaign_content_csv_path)
 
-        # Check if we have the platform column (new format)
-        if "platform" in df_content.columns:
+        # Check if we have the platform column (new format) and contains expected values
+        if (
+            "platform" in df_content.columns
+            and df_content["platform"].isin(["YouTube", "Instagram", "TikTok"]).any()
+        ):
+            print(f"Detected new platform-based format with {len(df_content)} rows")
             return create_platform_campaign_summary(df_content)
         else:
             # Original format processing
+            print(f"Detected legacy format with {len(df_content)} rows")
             return create_legacy_campaign_summary(df_content)
 
     except FileNotFoundError:
@@ -195,7 +200,7 @@ if __name__ == "__main__":
 
     # Example input/output paths (relative to project root assuming file is in processing_logic)
     project_root = os.path.dirname(os.path.dirname(__file__))  # Get parent directory
-    input_csv = os.path.join(project_root, "data", "campaign2.csv")
+    input_csv = os.path.join(project_root, "data", "campaign.csv")
     output_csv = os.path.join(project_root, "reports", "generated_campaign_summary.csv")
 
     if not os.path.exists(input_csv):

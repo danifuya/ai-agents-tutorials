@@ -305,7 +305,7 @@ def create_powerpoint_report(
         template_slide_layout = template_slide.slide_layout
         print(f"Using slide index {template_slide_index} as template.")
 
-        # Determine if this is template2 by looking for platform-specific placeholders
+        # Determine if this is the new template format by looking for platform-specific placeholders
         is_template2 = False
         for shape in template_slide.shapes:
             if hasattr(shape, "text_frame") and shape.has_text_frame:
@@ -660,16 +660,10 @@ if __name__ == "__main__":
         project_root, "reports", "generated_campaign_summary.csv"
     )
 
-    # Look for template2 first, then fall back to regular template
-    template2_path = os.path.join(project_root, "reports", "template", "template2.pptx")
+    # Use the standard template path
     template_path = os.path.join(project_root, "reports", "template", "template.pptx")
-
-    if os.path.exists(template2_path):
-        template_pptx_path = template2_path
-        print("Using template2.pptx for the report")
-    else:
-        template_pptx_path = template_path
-        print("Using template.pptx for the report")
+    template_pptx_path = template_path
+    print("Using template.pptx for the report")
 
     output_pptx_path = os.path.join(project_root, "reports", "generated_report.pptx")
 

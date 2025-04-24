@@ -21,7 +21,7 @@ When a file named `campaign.csv` is uploaded to your configured Google Drive fol
 2. Enable the Google Drive API
 3. Set up Application Default Credentials (ADC):
    ```
-   gcloud auth application-default login --scopes=https://www.googleapis.com/auth/drive
+   gcloud auth application-default login --scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/drive
    ```
 4. Create a folder in Google Drive and note its folder ID (the long string in the URL)
 

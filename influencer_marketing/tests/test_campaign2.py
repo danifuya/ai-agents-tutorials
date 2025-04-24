@@ -13,25 +13,25 @@ def test_platform_campaign_processing():
     """Test the new platform-specific campaign data processing functionality."""
     # Set paths
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    campaign_file = os.path.join(project_root, "data", "campaign2.csv")
+    campaign_file = os.path.join(project_root, "data", "campaign.csv")
     summary_output = os.path.join(
         project_root, "reports", "generated_campaign_summary.csv"
     )
-    template_file = os.path.join(project_root, "reports", "template", "template2.pptx")
+    template_file = os.path.join(project_root, "reports", "template", "template.pptx")
     report_output = os.path.join(project_root, "reports", "generated_report.pptx")
 
     # Ensure directories exist
     os.makedirs(os.path.dirname(summary_output), exist_ok=True)
 
-    # Check if campaign2.csv exists
+    # Check if campaign.csv exists
     if not os.path.exists(campaign_file):
         print(f"ERROR: Campaign file not found at {campaign_file}")
         return False
 
-    # Check if template2.pptx exists
+    # Check if template.pptx exists
     if not os.path.exists(template_file):
         print(f"ERROR: Template file not found at {template_file}")
-        print("Please ensure template2.pptx is in the reports/template directory")
+        print("Please ensure template.pptx is in the reports/template directory")
         return False
 
     print(f"Processing campaign data from {campaign_file}...")
