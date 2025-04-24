@@ -1,17 +1,6 @@
 import pandas as pd
 import os
 
-# Removed Pydantic/Pydantic-AI related imports
-# from dataclasses import dataclass
-# from typing import List
-# from pydantic import BaseModel, Field
-# from pydantic_ai import Agent, RunContext
-# import asyncio
-# import nest_asyncio
-
-# --- Removed CampaignMemberSummary BaseModel definition ---
-# --- Removed Agent Definition and Dependencies ---
-
 
 def create_campaign_summary(campaign_content_csv_path: str) -> pd.DataFrame | None:
     """Loads campaign content data, processes it, and returns the summary DataFrame."""
@@ -23,17 +12,24 @@ def create_campaign_summary(campaign_content_csv_path: str) -> pd.DataFrame | No
 
         df_content = pd.read_csv(campaign_content_csv_path)
 
-        # Check if we have the platform column (new format) and contains expected values
-        if (
-            "platform" in df_content.columns
-            and df_content["platform"].isin(["YouTube", "Instagram", "TikTok"]).any()
-        ):
-            print(f"Detected new platform-based format with {len(df_content)} rows")
-            return create_platform_campaign_summary(df_content)
-        else:
-            # Original format processing
-            print(f"Detected legacy format with {len(df_content)} rows")
-            return create_legacy_campaign_summary(df_content)
+        # Check if we have the required columns
+        required_columns = [
+            "campaign_id",
+            "influencer_handle",
+            "platform",
+            "impressions",
+            "reach",
+            "likes",
+            "comments",
+        ]
+        for col in required_columns:
+            if col not in df_content.columns:
+                print(f"Error: Required column '{col}' not found in CSV file")
+                return None
+
+        # Process data with platform-specific format
+        print(f"Processing platform-based format with {len(df_content)} rows")
+        return create_platform_campaign_summary(df_content)
 
     except FileNotFoundError:
         print(f"Error: File not found at {campaign_content_csv_path}")
@@ -49,45 +45,8 @@ def create_campaign_summary(campaign_content_csv_path: str) -> pd.DataFrame | No
         return None
 
 
-def create_legacy_campaign_summary(df_content: pd.DataFrame) -> pd.DataFrame:
-    """Process the original campaign format without platform-specific data."""
-    # Calculate total engagements
-    like_col = "likes" if "likes" in df_content.columns else None
-    comment_col = "comments" if "comments" in df_content.columns else None
-    save_col = "saves" if "saves" in df_content.columns else None
-
-    df_content["engagements"] = 0
-    if like_col:
-        df_content["engagements"] += df_content[like_col].fillna(0)
-    if comment_col:
-        df_content["engagements"] += df_content[comment_col].fillna(0)
-    if save_col:
-        df_content["engagements"] += df_content[save_col].fillna(0)
-
-    # Group by campaign and influencer
-    summary = (
-        df_content.groupby(["campaign_id", "influencer_handle"])
-        .agg(
-            total_posts=("post_url", "count"),
-            total_impressions=("impressions", "sum"),
-            total_reach=("reach", "sum"),
-            total_engagements=("engagements", "sum"),
-        )
-        .reset_index()
-    )
-
-    # Calculate average engagement rate
-    summary["avg_engagement_rate"] = (
-        summary["total_engagements"] / summary["total_reach"]
-    ).round(4)
-    summary.loc[summary["total_reach"] == 0, "avg_engagement_rate"] = 0
-
-    print("Legacy data analysis complete. Summary generated.")
-    return summary
-
-
 def create_platform_campaign_summary(df_content: pd.DataFrame) -> pd.DataFrame:
-    """Process the new campaign2 format with platform-specific data."""
+    """Process campaign data with platform-specific data."""
     # Calculate total engagements
     df_content["engagements"] = df_content["likes"].fillna(0) + df_content[
         "comments"
@@ -131,9 +90,7 @@ def create_platform_campaign_summary(df_content: pd.DataFrame) -> pd.DataFrame:
 
             # If there's data for this platform
             if not platform_data.empty:
-                platform_prefix = platform.lower()[
-                    :2
-                ]  # 'yo' for YouTube, 'in' for Instagram, 'ti' for TikTok
+                platform_prefix = platform.lower()[:2]
                 if platform == "YouTube":
                     platform_prefix = "yt"
                 elif platform == "Instagram":
@@ -188,32 +145,7 @@ def create_platform_campaign_summary(df_content: pd.DataFrame) -> pd.DataFrame:
     # Convert list of dictionaries to DataFrame
     summary_df = pd.DataFrame(all_summaries)
 
-    print("Platform-based data analysis complete. Extended summary generated.")
+    print("Platform-based data analysis complete. Summary generated.")
     return summary_df
 
 
-# --- Example Usage (synchronous) ---
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-
-    load_dotenv()  # Load .env if running directly
-
-    # Example input/output paths (relative to project root assuming file is in processing_logic)
-    project_root = os.path.dirname(os.path.dirname(__file__))  # Get parent directory
-    input_csv = os.path.join(project_root, "data", "campaign.csv")
-    output_csv = os.path.join(project_root, "reports", "generated_campaign_summary.csv")
-
-    if not os.path.exists(input_csv):
-        print(f"ERROR: Example input file not found: {input_csv}")
-        print("Please ensure the file exists or modify the path in the __main__ block.")
-    else:
-        print(f"Running direct analysis function for {input_csv}... (from __main__)")
-        df_summary = create_campaign_summary(input_csv)
-
-        if df_summary is not None:
-            os.makedirs(os.path.dirname(output_csv), exist_ok=True)
-            df_summary.to_csv(output_csv, index=False)
-            print(f"Summary saved to {output_csv}")
-            print(df_summary)
-        else:
-            print("Failed to generate summary (from __main__).")
