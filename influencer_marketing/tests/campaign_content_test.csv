@@ -1,5 +1,0 @@
-campaign_id,influencer_handle,post_url,post_type,impressions,reach,likes,comments,saves
-campaign1,@influencer1,http://example.com/post1,image,10000,5000,500,50,20
-campaign1,@influencer1,http://example.com/post2,video,20000,8000,700,80,40
-campaign1,@influencer2,http://example.com/post3,image,15000,6000,600,60,30
-campaign2,@influencer2,http://example.com/post4,video,25000,10000,800,100,50
