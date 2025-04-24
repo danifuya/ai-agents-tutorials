@@ -19,7 +19,7 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.shapes.base import BaseShape
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
-from pptx.enum.dml import MSO_FILL_TYPE, MSO_THEME_COLOR
+from pptx.enum.dml import MSO_FILL_TYPE
 from pptx.table import Table
 
 
@@ -43,16 +43,7 @@ def copy_fill_properties(source, target):
                 and source.fill.fore_color.rgb is not None
             ):
                 target.fill.fore_color.rgb = source.fill.fore_color.rgb
-            # Copy theme color if available
-            elif (
-                hasattr(source.fill.fore_color, "theme_color")
-                and source.fill.fore_color.theme_color is not None
-            ):
-                target.fill.fore_color.theme_color = source.fill.fore_color.theme_color
-                if hasattr(source.fill.fore_color, "brightness"):
-                    target.fill.fore_color.brightness = (
-                        source.fill.fore_color.brightness
-                    )
+            # No theme color handling - simplified
 
         # Copy transparency
         if hasattr(source.fill, "transparency"):
@@ -90,18 +81,7 @@ def copy_line_properties(source, target):
                     and source.line.fill.fore_color.rgb is not None
                 ):
                     target.line.fill.fore_color.rgb = source.line.fill.fore_color.rgb
-                # Handle theme color
-                elif (
-                    hasattr(source.line.fill.fore_color, "theme_color")
-                    and source.line.fill.fore_color.theme_color is not None
-                ):
-                    target.line.fill.fore_color.theme_color = (
-                        source.line.fill.fore_color.theme_color
-                    )
-                    if hasattr(source.line.fill.fore_color, "brightness"):
-                        target.line.fill.fore_color.brightness = (
-                            source.line.fill.fore_color.brightness
-                        )
+                # No theme color handling - simplified
     except Exception as e:
         print(f"Error copying line properties: {e}")
 
@@ -121,17 +101,10 @@ def copy_font_properties(source_font, target_font):
 
     # Copy color properties
     try:
-        # Copy RGB color
+        # Copy RGB color only
         if hasattr(source_font.color, "rgb") and source_font.color.rgb is not None:
             target_font.color.rgb = source_font.color.rgb
-        # Copy theme color
-        elif (
-            hasattr(source_font.color, "theme_color")
-            and source_font.color.theme_color is not None
-        ):
-            target_font.color.theme_color = source_font.color.theme_color
-            if hasattr(source_font.color, "brightness"):
-                target_font.color.brightness = source_font.color.brightness
+        # No theme color handling - simplified
     except Exception:
         pass
 
