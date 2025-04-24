@@ -305,19 +305,6 @@ def create_powerpoint_report(
         template_slide_layout = template_slide.slide_layout
         print(f"Using slide index {template_slide_index} as template.")
 
-        # Determine if this is the new template format by looking for platform-specific placeholders
-        is_template2 = False
-        for shape in template_slide.shapes:
-            if hasattr(shape, "text_frame") and shape.has_text_frame:
-                for paragraph in shape.text_frame.paragraphs:
-                    text = "".join(run.text for run in paragraph.runs)
-                    if "{{yt_" in text or "{{ig_" in text or "{{tt_" in text:
-                        is_template2 = True
-                        print(
-                            "Detected template2 format with platform-specific placeholders"
-                        )
-                        break
-
         # Store all template shapes for reference
         template_shapes = list(template_slide.shapes)
 
@@ -485,47 +472,45 @@ def create_powerpoint_report(
                                     "{{influencer}}", influencer_handle
                                 )
 
-                            # Check for template2 platform placeholders
-                            if is_template2:
-                                # Handle platform-specific placeholders first
-                                platform_prefixes = ["yt", "ig", "tt"]
-                                metrics = [
-                                    "posts",
-                                    "impressions",
-                                    "reach",
-                                    "likes_comments",
-                                    "eng_rate",
-                                ]
+                            # Handle platform-specific placeholders
+                            platform_prefixes = ["yt", "ig", "tt"]
+                            metrics = [
+                                "posts",
+                                "impressions",
+                                "reach",
+                                "likes_comments",
+                                "eng_rate",
+                            ]
 
-                                for prefix in platform_prefixes:
-                                    for metric in metrics:
-                                        placeholder = f"{{{{{prefix}_{metric}}}}}"
-                                        if placeholder in modified_text:
-                                            column_name = f"{prefix}_{metric}"
+                            for prefix in platform_prefixes:
+                                for metric in metrics:
+                                    placeholder = f"{{{{{prefix}_{metric}}}}}"
+                                    if placeholder in modified_text:
+                                        column_name = f"{prefix}_{metric}"
 
-                                            if column_name in row:
-                                                value = row[column_name]
+                                        if column_name in row:
+                                            value = row[column_name]
 
-                                                # Format values according to metric type
-                                                if metric == "eng_rate":
-                                                    # Format as percentage
-                                                    formatted_value = f"{value:.2%}"
-                                                elif metric in [
-                                                    "impressions",
-                                                    "reach",
-                                                    "likes_comments",
-                                                ]:
-                                                    # Format as numbers with commas
-                                                    formatted_value = f"{int(value):,}"
-                                                else:
-                                                    # Default formatting
-                                                    formatted_value = str(value)
+                                            # Format values according to metric type
+                                            if metric == "eng_rate":
+                                                # Format as percentage
+                                                formatted_value = f"{value:.2%}"
+                                            elif metric in [
+                                                "impressions",
+                                                "reach",
+                                                "likes_comments",
+                                            ]:
+                                                # Format as numbers with commas
+                                                formatted_value = f"{int(value):,}"
+                                            else:
+                                                # Default formatting
+                                                formatted_value = str(value)
 
-                                                modified_text = modified_text.replace(
-                                                    placeholder, formatted_value
-                                                )
+                                            modified_text = modified_text.replace(
+                                                placeholder, formatted_value
+                                            )
 
-                            # Handle standard placeholders (works for both templates)
+                            # Handle standard placeholders for any column in the data
                             for col in df_summary.columns:
                                 tag = f"{{{{{col}}}}}"
                                 if tag in modified_text:
@@ -644,74 +629,3 @@ def create_powerpoint_report(
 
         traceback.print_exc()
         return None
-
-
-if __name__ == "__main__":
-    # Test the function with example data
-    from dotenv import load_dotenv
-
-    load_dotenv()  # Load .env file if running directly
-
-    # Determine the project root directory (parent of processing_logic/)
-    project_root = os.path.dirname(os.path.dirname(__file__))
-
-    # Example file paths (adapt as needed)
-    summary_csv_path = os.path.join(
-        project_root, "reports", "generated_campaign_summary.csv"
-    )
-
-    # Use the standard template path
-    template_path = os.path.join(project_root, "reports", "template", "template.pptx")
-    template_pptx_path = template_path
-    print("Using template.pptx for the report")
-
-    output_pptx_path = os.path.join(project_root, "reports", "generated_report.pptx")
-
-    # Check if inputs exist
-    if not os.path.exists(summary_csv_path):
-        print(f"ERROR: Summary CSV not found at {summary_csv_path}")
-        # Add platform columns for testing if the summary file is missing
-        dummy_data = {
-            "campaign_id": ["c1"],
-            "influencer_handle": ["@infA"],
-            "total_posts": [1],
-            "total_impressions": [1000],
-            "total_reach": [500],
-            "total_engagements": [50],
-            "avg_engagement_rate": [0.1],
-            # Add platform-specific columns for template2
-            "yt_posts": [2],
-            "yt_impressions": [2000],
-            "yt_reach": [1000],
-            "yt_likes_comments": [200],
-            "yt_eng_rate": [0.1],
-            "ig_posts": [3],
-            "ig_impressions": [3000],
-            "ig_reach": [1500],
-            "ig_likes_comments": [300],
-            "ig_eng_rate": [0.1],
-            "tt_posts": [4],
-            "tt_impressions": [4000],
-            "tt_reach": [2000],
-            "tt_likes_comments": [400],
-            "tt_eng_rate": [0.1],
-        }
-        os.makedirs(os.path.dirname(summary_csv_path), exist_ok=True)
-        pd.DataFrame(dummy_data).to_csv(summary_csv_path, index=False)
-        print(f"Created dummy summary file at {summary_csv_path}")
-
-    elif not os.path.exists(template_pptx_path):
-        print(f"ERROR: Template not found at {template_pptx_path}")
-    else:
-        print(f"Generating PowerPoint report using {summary_csv_path}...")
-        result_path = create_powerpoint_report(
-            summary_csv_path=summary_csv_path,
-            template_pptx_path=template_pptx_path,
-            output_pptx_path=output_pptx_path,
-            template_slide_index=1,  # Assuming the template slide is at index 1 (second slide)
-        )
-
-        if result_path:
-            print(f"✅ Successfully generated report at: {result_path}")
-        else:
-            print("❌ Failed to generate report.")
