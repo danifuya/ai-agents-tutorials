@@ -61,7 +61,7 @@ When you return urls of the tools, make sure they are not articles but the websi
 search_agent = Agent(
     model,
     system_prompt=system_prompt,
-    result_type=List[Tool],
+    output_type=List[Tool],
 )
 
 

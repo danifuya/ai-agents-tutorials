@@ -3,11 +3,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
-from typing import List, Optional, AsyncGenerator
-import asyncpg
-import os
-
-from contextlib import asynccontextmanager
+from typing import List, Optional
 
 from crawl4ai.async_configs import CrawlerRunConfig
 from crawl4ai import CacheMode
@@ -139,7 +135,7 @@ Reply just with agent data after inserting the agent listing into the database.
 listing_summarizer_agent = Agent(
     model,
     system_prompt=system_prompt,
-    result_type=AIAgentListing,
+    output_type=AIAgentListing,
 )
 
 

@@ -247,7 +247,7 @@ Reply just with the success or error message indicating names of the agents that
 db_inserter_agent = Agent(
     model,
     system_prompt=system_prompt,
-    result_type=InsertionResult,
+    output_type=InsertionResult,
 )
 
 

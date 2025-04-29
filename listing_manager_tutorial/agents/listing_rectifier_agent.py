@@ -202,7 +202,7 @@ Chain of thought:
 listing_rectifier_agent = Agent(
     model,
     system_prompt=system_prompt,
-    result_type=List[AIAgentListing],
+    output_type=List[AIAgentListing],
 )
 
 
