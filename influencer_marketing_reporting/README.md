@@ -19,11 +19,12 @@ When a file named `campaign.csv` is uploaded to your configured Google Drive fol
 
 1. Create or select a Google Cloud project
 2. Enable the Google Drive API
-3. Set up Application Default Credentials (ADC):
+3. Install the [Google Cloud SDK (gcloud)](https://cloud.google.com/sdk/docs/install) if you haven't already
+4. Set up Application Default Credentials (ADC):
    ```
    gcloud auth application-default login --scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/drive
    ```
-4. Create a folder in Google Drive and note its folder ID (the long string in the URL)
+5. Create a folder in Google Drive and note its folder ID (the long string in the URL)
 
 ### 2. Environment Configuration
 
@@ -65,10 +66,8 @@ The server will:
 ## Server API Endpoints
 
 - `/register-webhook` - Manually register a new webhook
-- `/list-webhooks` - List active webhook registrations
-- `/unregister-webhook/{channel_id}` - Unregister a specific webhook
-- `/test-drive-changes` - Manually test processing of recent changes
 - `/health` - Check server status
+- `/webhook/google-drive` - The actual webhook endpoint (not called directly)
 
 ## File Requirements
 
