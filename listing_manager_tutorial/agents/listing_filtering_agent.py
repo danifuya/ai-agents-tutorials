@@ -49,7 +49,7 @@ Threshold criteria for confidence score:
 listing_filtering_agent = Agent(
     model,
     system_prompt=system_prompt,
-    result_type=List[potential_ai_agent],
+    output_type=List[potential_ai_agent],
 )
 
 
