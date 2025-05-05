@@ -1,4 +1,5 @@
 import os
+import base64
 import logfire
 from typing import Optional, List
 
@@ -8,22 +9,25 @@ from pydantic_ai.messages import ModelMessage
 
 # Load environment variables
 from dotenv import load_dotenv
+import nest_asyncio
 
 load_dotenv()
 
+# Langfuse configuration (commented out but moved here)
+LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")
+LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY")
+LANGFUSE_HOST = os.getenv("LANGFUSE_HOST")
+
+LANGFUSE_AUTH = base64.b64encode(
+    f"{LANGFUSE_PUBLIC_KEY}:{LANGFUSE_SECRET_KEY}".encode()
+).decode()
+os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"{LANGFUSE_HOST}/api/public/otel"
+os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {LANGFUSE_AUTH}"
+
+nest_asyncio.apply()
+
 # Configure Logfire
 logfire.configure(token=os.getenv("LOGFIRE_TOKEN"))
-
-# Langfuse configuration (commented out but moved here)
-# LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")
-# LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY")
-# LANGFUSE_HOST = os.getenv("LANGFUSE_HOST")
-# if all([LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST]):
-#     LANGFUSE_AUTH = base64.b64encode(
-#         f"{LANGFUSE_PUBLIC_KEY}:{LANGFUSE_SECRET_KEY}".encode()
-#     ).decode()
-#     os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"{LANGFUSE_HOST}/api/public/otel"
-#     os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {LANGFUSE_AUTH}"
 
 
 # Pydantic model for agent output
