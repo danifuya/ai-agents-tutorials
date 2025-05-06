@@ -1,11 +1,10 @@
 import os
 import base64
 import logfire
-from typing import Optional, List
+from typing import Optional
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
-from pydantic_ai.messages import ModelMessage
 
 # Load environment variables
 from dotenv import load_dotenv

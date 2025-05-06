@@ -4,12 +4,9 @@ import pandas as pd
 from PIL import Image
 from pathlib import Path
 import datetime
-import json
-from typing import Optional, List, Dict, Tuple, Union, Any
-from pydantic_ai.messages import ModelMessage
 
 # Import agent module
-from agent import RenovationAssistantOutput, renovation_agent
+from agent import renovation_agent
 
 # Import Google Docs export functionality
 import gdocs_export
@@ -17,9 +14,11 @@ import gdocs_export
 # Load environment variables
 from dotenv import load_dotenv
 
+
 # --- Constants ---
-MIN_QUESTIONS_FOR_COMPLETION = 2
+MIN_QUESTIONS_FOR_COMPLETION = 15
 # ---------------
+
 
 load_dotenv()
 
@@ -173,18 +172,6 @@ def handle_next_question():
 def main():
     st.title("🏠 Home Renovation Assistant")
 
-    # Debug section
-    with st.expander("Debug Information"):
-        st.subheader("Session State Messages")
-
-        st.subheader("Other Session State Variables")
-        st.write(f"Number of questions asked: {st.session_state.question_count}")
-        st.write(f"Current question: {st.session_state.current_question}")
-        st.write(f"Session completed: {st.session_state.session_completed}")
-        st.write(
-            f"Number of collected data entries: {len(st.session_state.collected_data)}"
-        )
-
     # Sidebar for company branding/info
     with st.sidebar:
         st.header("Company Information")
@@ -198,10 +185,6 @@ def main():
         st.write("**Contact Information:**")
         st.write("Phone: (555) 123-4567")
         st.write("Email: info@renovationcompany.com")
-
-        if st.session_state.collected_data:
-            st.write("---")
-            st.write(f"Questions asked: {st.session_state.question_count}")
 
     # Main content area
     if not st.session_state.session_completed:
@@ -234,8 +217,10 @@ def main():
 
             if is_complete:
                 placeholder.empty()
-                save_session_data()
-                st.rerun()
+                with st.spinner("Saving your information, please wait..."):
+                    save_session_data()
+                # After saving, session_completed will be True from handle_next_question or button
+                st.rerun()  # Rerun to show completion message
             elif st.session_state.current_question:
                 placeholder.write(st.session_state.current_question)
             else:
@@ -255,26 +240,7 @@ def main():
                 key=f"upload_{st.session_state.question_count}",
             )
 
-            # Button to finish conversation early
-            if st.button("Finish Conversation & Generate Report", key="finish_button"):
-                if st.session_state.collected_data:  # Only save if there's data
-                    print("Finish button clicked, saving data...")
-                    if save_session_data():
-                        st.session_state.session_completed = True
-                        st.session_state.current_question = (
-                            ""  # Clear question to prevent loop issues
-                        )
-                        st.rerun()
-                    else:
-                        st.warning("Could not save session data.")
-                        # Keep session active if save fails
-                else:
-                    st.info(
-                        "No data collected yet. Please answer at least one question before finishing."
-                    )
-                    # Keep session active
-
-            # Process user response if the button wasn't clicked
+            # Process user response
             if user_response:
                 current_question = st.session_state.current_question
 
