@@ -17,7 +17,17 @@ import gdocs_export
 # Load environment variables
 from dotenv import load_dotenv
 
+# --- Constants ---
+MIN_QUESTIONS_FOR_COMPLETION = 2
+# ---------------
+
 load_dotenv()
+
+# Check if Google Drive Folder ID is set
+if not os.getenv("GOOGLE_DRIVE_FOLDER_ID"):
+    st.warning(
+        "GOOGLE_DRIVE_FOLDER_ID environment variable is not set. Google Docs export will be disabled."
+    )
 
 
 # Configure page
@@ -77,7 +87,12 @@ def save_session_data():
     )
 
     # Generate Google Docs URL
-    gdocs_export.export_to_gdocs(st.session_state.collected_data)
+    gdocs_url = gdocs_export.export_to_gdocs(st.session_state.collected_data)
+    if gdocs_url:
+        st.session_state.gdocs_url = gdocs_url  # Store for potential display
+        print(f"Google Doc created: {gdocs_url}")
+    else:
+        print("Failed to export to Google Docs.")
 
     return True
 
@@ -102,27 +117,29 @@ def handle_next_question():
 
     # Run the agent with proper message history
     result = renovation_agent.run_sync(
-        prompt,
+        user_prompt=prompt,
         message_history=message_history,
     )
 
     # Get agent response
     response = result.output
 
-    # Check if the assessment is complete (requires >= 15 questions)
-    is_complete = response.is_complete and question_count >= 15
+    # Check if the assessment is complete (requires >= MIN_QUESTIONS_FOR_COMPLETION questions)
+    is_complete = (
+        response.is_complete and question_count >= MIN_QUESTIONS_FOR_COMPLETION
+    )
 
     next_question = None
 
     if not is_complete and response.next_question:
         next_question = response.next_question
-    elif question_count < 15:
-        # Force another question if we haven't asked 15 yet
-        forceful_prompt = f"We need at least 15 questions total. You've only asked {question_count} so far. Please provide the next question now. Do not number the question."
+    elif question_count < MIN_QUESTIONS_FOR_COMPLETION:
+        # Force another question if we haven't asked the minimum yet
+        forceful_prompt = f"We need at least {MIN_QUESTIONS_FOR_COMPLETION} questions total. You've only asked {question_count} so far. Please provide the next question now. Do not number the question."
 
         # Re-run the agent with the forceful prompt and same message history
         result = renovation_agent.run_sync(
-            forceful_prompt,
+            user_prompt=forceful_prompt,
             message_history=message_history,
         )
 
@@ -134,7 +151,7 @@ def handle_next_question():
         )
         is_complete = False
     else:
-        # If we've asked 15+ questions and the agent says complete
+        # If we've asked MIN_QUESTIONS_FOR_COMPLETION+ questions and the agent says complete
         next_question = None
         is_complete = True
 
@@ -238,7 +255,26 @@ def main():
                 key=f"upload_{st.session_state.question_count}",
             )
 
-            # Process user response
+            # Button to finish conversation early
+            if st.button("Finish Conversation & Generate Report", key="finish_button"):
+                if st.session_state.collected_data:  # Only save if there's data
+                    print("Finish button clicked, saving data...")
+                    if save_session_data():
+                        st.session_state.session_completed = True
+                        st.session_state.current_question = (
+                            ""  # Clear question to prevent loop issues
+                        )
+                        st.rerun()
+                    else:
+                        st.warning("Could not save session data.")
+                        # Keep session active if save fails
+                else:
+                    st.info(
+                        "No data collected yet. Please answer at least one question before finishing."
+                    )
+                    # Keep session active
+
+            # Process user response if the button wasn't clicked
             if user_response:
                 current_question = st.session_state.current_question
 
