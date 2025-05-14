@@ -27,8 +27,6 @@ SCOPES = [
     "https://www.googleapis.com/auth/documents",
     "https://www.googleapis.com/auth/drive.file",
 ]
-# Path to your service account key file - NO LONGER USED with ADC/WIF
-# SERVICE_ACCOUNT_FILE = 'service_account.json'
 
 
 def get_google_services():
@@ -470,46 +468,4 @@ def export_to_json(
         json.dump(doc_data, f, indent=2)
 
     print(f"Data exported to JSON: {filename}")
-    return filename
-
-
-def export_to_csv(
-    data: List[Tuple[str, str, Optional[str]]], filename: str = None
-) -> str:
-    """
-    Export the collected renovation data to CSV file.
-
-    Args:
-        data: List of tuples containing (question, answer, image_path)
-        filename: Name of the CSV file to create
-
-    Returns:
-        Path to the created CSV file
-    """
-    # Create directory if it doesn't exist
-    Path("data").mkdir(exist_ok=True)
-
-    # Generate filename if not provided
-    if filename is None:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"data/renovation_assistant_{timestamp}.csv"
-
-    # Create a dataframe
-    rows = []
-    for question, answer, img_path in data:
-        rows.append(
-            {
-                "Question": question,
-                "Answer": answer,
-                "Has Image": "Yes" if img_path else "No",
-                "Image Path": img_path if img_path else "",
-            }
-        )
-
-    df = pd.DataFrame(rows)
-
-    # Save to CSV
-    df.to_csv(filename, index=False)
-
-    print(f"Data exported to CSV: {filename}")
     return filename
