@@ -1,0 +1,3347 @@
+{
+  "name": "listing_uploading_chat",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{ $json.website }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6780,
+        3160
+      ],
+      "id": "a8560429-65e6-4837-9bcc-8087da20e524",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and process the HTML content\nfor (const item of $input.all()) {\n  if (item.json.data) {\n    let html = item.json.data;\n    \n    // Remove script and style tags and their content\n    html = html.replace(/<script\\b[^<]*(?:(?!<\\/script>)<[^<]*)*<\\/script>/gi, '');\n    html = html.replace(/<style\\b[^<]*(?:(?!<\\/style>)<[^<]*)*<\\/style>/gi, '');\n    \n    // Remove navigation, header, footer, and other common irrelevant elements\n    const elementsToRemove = [\n       'header','footer', 'sidebar',\n      'advertisement', 'banner', 'menu',\n      'social-links', 'related-posts', 'comments',\n      'cookie-notice', 'popup', 'navigation'\n    ];\n    \n    elementsToRemove.forEach(elem => {\n      const regex = new RegExp(`<(div|section|aside)([^>]*?)(class|id)=[\"'][^\"']*?(${elem})[^\"']*?[\"'][^>]*?>([\\\\s\\\\S]*?)<\\/\\\\1>`, 'gi');\n      html = html.replace(regex, '');\n    });\n    \n    // Convert common HTML entities\n    html = html.replace(/&nbsp;/g, ' ')\n               .replace(/&amp;/g, '&')\n               .replace(/&lt;/g, '<')\n               .replace(/&gt;/g, '>');\n    \n    // Remove all remaining HTML tags\n    html = html.replace(/<[^>]+>/g, ' ');\n    \n    // Clean up whitespace\n    html = html.replace(/\\s+/g, ' ')\n               .replace(/^\\s+|\\s+$/g, '');\n    \n    // Store the cleaned content back in the item\n    item.json.data = html;\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6400,
+        3020
+      ],
+      "id": "7cbca6d2-a8ac-4eb5-8087-4882095f00ab",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an excellent information collector and summarizer. You create content that will be listed as a page for an AI agent directory. You will be given unstructured information extracted from a landing page that offers AI Agent services and the website url. Your task is to extract the name of the service and if the solution is open-source. (An agent is considered open-source if the landing explicitly says that it is open source).\nChain of thought\nFirst extract the name.\nThen identify the probability that the service is open-source with a confidence score between 0 and 1. \nIf the confidence score is below 0.85 set the open source to false .\nAvoid filler words.\nExmaples of names formats considered good:\n[\n  \"Chatthing\",\n  \"Qodex.ai\",\n  \"Kusho AI\",\n  \"Reachy\",\n  \"O-mega\",\n  \"Jolt AI\",\n  \"KIVA\",\n  \"FastTrackr AI\",\n  \"Postman\",\n  \"Nowadays\",\n  \"Goose\",\n  \"Convergence\",\n  \"co.dev\",\n  \"CopyCat\",\n  \"Wepost\",\n  \"txtai\",\n  \"Trae\",\n  \"Potpie\",\n  \"HeyBoss\",\n  \"MeetMinutes\"\n]\n<website>{{ $('Code6').item.json.website }}<website>\n<unstructured_data>{{ $json.data }}</unstrucutured_data>",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -5700,
+        520
+      ],
+      "id": "c1a95075-82fc-48f7-aade-3ff0cb293284",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "tableId": "listings",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "slug",
+              "fieldValue": "={{ $json.slug }}"
+            },
+            {
+              "fieldId": "website_url",
+              "fieldValue": "={{ $json.website }}"
+            },
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "short_description",
+              "fieldValue": "={{ $json['short-description'] }}"
+            },
+            {
+              "fieldId": "long_description",
+              "fieldValue": "={{ $json['long-description'] }}"
+            },
+            {
+              "fieldId": "github_url",
+              "fieldValue": "={{ $json.githubLink }}"
+            },
+            {
+              "fieldId": "is_reviewed",
+              "fieldValue": "false"
+            },
+            {
+              "fieldId": "video_url",
+              "fieldValue": "={{ $('Structure data').item.json['youtube-video-url'] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        1680
+      ],
+      "id": "95d4f3c0-8433-4962-a648-3b6bd0a30ce8",
+      "name": "Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the first item from input\nconst item = $input.first();\n\n// Extract the data object\nconst data = item.json.output;\n\n// Map fields to your desired key names\nreturn [\n  {\n    json: {...data\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3840,
+        1440
+      ],
+      "id": "683202be-876f-4662-94e3-210768d33d01",
+      "name": "Structure data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the input data from the previous node\nconst items = $input.all();\n\n// Process each item\nreturn items.map(item => {\n  let data = item.json;\n\n  // Check if 'slug' exists, if not, generate it from 'name'\n  if (!data.slug && data.name) {\n    data.slug = `${data.name\n      .toLowerCase()\n      .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric characters with hyphens\n      .replace(/^-+|-+$/g, '')}`; // Remove leading or trailing hyphens\n  }\n\n  // Return the updated data\n  return { json: data };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        1680
+      ],
+      "id": "a981aa94-2173-4199-be47-9ce40c32c32b",
+      "name": "Add slug"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst items = $input.all();\n\n// Transform the input into a 'tags' array\nconst tags = items.map(item => {\n  const data = item.json;\n\n  // Keep only 'id' and 'name'\n  return {\n    id: data.tag_id,\n    name: data.tag_name,\n  };\n});\n\n// Return the 'tags' array as a single object\nreturn [\n  {\n    json: {\n      DBtags: tags\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        2960
+      ],
+      "id": "79db59a6-bc8c-4afe-b186-6c401226638e",
+      "name": "Structure data1"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2501",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -5640,
+        700
+      ],
+      "id": "f0024fe3-a3ab-486f-b8d5-10709fa340e5",
+      "name": "Mistral Small",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "3pMWLg50ePyURoh0",
+          "name": "GMAIL@danifuya - Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2501",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        320,
+        2840
+      ],
+      "id": "7a86469f-48a0-459e-b520-d8e3cae9719d",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "CAZyYGFgbDf8Y0gu",
+          "name": "essec@dani  -Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Task: Assign up to 3 relevant tags to a listing based on its description, features, and use cases. Provide a confidence score (between 0 and 1) for each tag, ranking them by relevance. The tags must be selected from the provided list of available tags.\n\nAvailable Tags:\n\n{{ JSON.stringify($json.DBtags) }}\nExamples of Correct Tag Assignments:\nDescription: \"Automates LinkedIn outreach for partnerships and lead generation...\"\nFeatures: [\"Multi-account management\", \"GPT-4 integration\"]\nUse Cases: [\"Sales prospecting\", \"Partnership building\"]\nTags:\n{\"tags\": [{\"name\": \"Lead Generation\", \"confidence\": 0.95}, {\"name\": \"Outreach\", \"confidence\": 0.90}]}\n\n\nDescription: \"Provides SEO keyword research and content optimization...\"\nFeatures: [\"Search Console integration\", \"Competitor analysis\"]\nUse Cases: [\"Content strategy\", \"Rank tracking\"]\nTags:\n{\"tags\": [{\"name\": \"Keyword Research\", \"confidence\": 0.98}, {\"name\": \"Content Creation\", \"confidence\": 0.85}]}\n\nDescription: \"Builds and deploys AI-driven multi-agent workflows...\"\nFeatures: [\"Drag-and-drop editor\", \"Integration with Google Search\"]\nUse Cases: [\"Sales automation\", \"Marketing research\"]\nTags:\n{\"tags\": [ {\"name\": \"No-Code\", \"confidence\": 0.87}]}\n\nListing to Tag:\nDescription: {{ $json['long-description'] }}\nUse Cases: {{ $json.usecases }}\nFeatures: {{ $json.features }}\n\nResponse Requirements:\nAssign up to 3 tags, ranked by relevance.\nProvide a confidence score for each tag (between 0 and 1).\nOnly use tags from the provided list of available tags.\nEnsure confidence scores are distinct and reflect the relevance of each tag.\n\n",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        440,
+        2580
+      ],
+      "id": "140db14f-0e19-4286-8e32-70946116d790",
+      "name": "Basic LLM Chain1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"tags\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"id\": {\n            \"type\": \"string\"\n          },\n          \"name\": {\n            \"type\": \"string\"\n          },\n          \"confidence\": {\n            \"type\": \"number\"\n          }\n        },\n        \"required\": [\"id\", \"name\", \"confidence\"]\n      }\n    }\n  },\n  \"required\": [\"tags\"]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        2860
+      ],
+      "id": "a0e04e5c-8636-49e1-b3a9-2b888d9fd184",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1040,
+        2900
+      ],
+      "id": "a57b6ce4-ed27-4a79-86d4-90342deedefa",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "content": "## Tag contrast\n\nSince LLM is prone to allucinate inventing tags that are not there, we contrast tags provided by LLM with the ones in the DB",
+        "height": 340,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        960,
+        2760
+      ],
+      "id": "db3f22d7-5c6f-4e62-8fed-b56a47f4904f",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the LLM-generated tags from item 0\nconst llmTags = $input.first().json.output.tags\n\n// 2. Get the “real” tags from the last item\nconst realTags = $input.last().json.DBtags;\n\n// 3. Filter LLM tags to keep only those that match the real tags exactly\nconst validatedTags = llmTags.filter((llmTag) => {\n  return realTags.some((realTag) => \n    realTag.id === llmTag.id && realTag.name === llmTag.name\n  );\n});\n\n// 4. Filter llm tags\nconst confidenceTags = validatedTags.filter(llmTag => llmTag.confidence > 0.9);\n\n\n\n// 5. Return the validated tags in one output item\nreturn [\n  {\n    json: {\n      validatedTags: confidenceTags.slice(0, 2)\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        2900
+      ],
+      "id": "e29acc45-6692-4229-a48f-f3a3909be36d",
+      "name": "Keep only existing tags"
+    },
+    {
+      "parameters": {
+        "tableId": "listings_tags",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "listing_id",
+              "fieldValue": "={{ $json.listing_id }}"
+            },
+            {
+              "fieldId": "tag_id",
+              "fieldValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2660,
+        2500
+      ],
+      "id": "52bfd5cc-4609-4eff-ab5d-17b78eedb143",
+      "name": "Supabase2",
+      "notesInFlow": false,
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Asssign tag to listing in DB\n",
+        "height": 300,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        2420
+      ],
+      "id": "8b6ea3c6-d75f-4eb5-aa82-860c1d796b1f",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Create listing and return listing id\n\n",
+        "height": 300,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -500,
+        1620
+      ],
+      "id": "4e8f9fba-9d81-4b85-aa33-f428553e34f8",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2501",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -1480,
+        2860
+      ],
+      "id": "d7240b48-956c-43a6-8b7e-4ee9c74410e8",
+      "name": "Mistral Cloud Chat Model1",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "5fKpZ59uCWRn9qAm",
+          "name": "BAIA@info - Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -1640,
+        2760
+      ],
+      "id": "06f43fc4-0e73-4488-90c4-fb6d519e888b",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Task: Assign the most appropriate category to a tool by analyzing its description, features, and use cases. Provide a confidence score between 0 and 1 indicating how confident you are in the categorization.\n\nAvailable Categories (ONLY USE THESE):\n{{ JSON.stringify($json.categories) }}\nExamples of Correct Categorizations:\n\n[\n  {\n    \"Description\": \"Automates LinkedIn outreach for partnerships and lead generation...\",\n    \"Features\": [\"Multi-account management\", \"GPT-4 integration\"],\n    \"Use Cases\": [\"Sales prospecting\"],\n    \"Category\": \"Sales\",\n    \"Confidence\": 0.95,\n    \"Response\": {\n      \"categories\": [{\"name\": \"Sales\"}],\n      \"confidence\": 0.95\n    }\n  },\n  {\n    \"Description\": \"Generates full-stack apps from natural language descriptions...\",\n    \"Features\": [\"Next.js/Supabase integration\", \"Authentication modules\"],\n    \"Use Cases\": [\"Rapid prototyping\", \"No-code development\"],\n    \"Category\": \"App Development\",\n    \"Confidence\": 0.90,\n    \"Response\": {\n      \"categories\": [{\"name\": \"App Development\"}],\n      \"confidence\": 0.90\n    }\n  },\n  {\n    \"Description\": \"Provides SEO keyword research and content optimization...\",\n    \"Features\": [\"Search Console integration\", \"Competitor analysis\"],\n    \"Use Cases\": [\"Content strategy\", \"Rank tracking\"],\n    \"Category\": \"SEO\",\n    \"Confidence\": 0.98,\n    \"Response\": {\n      \"categories\": [{\"name\": \"SEO\"}],\n      \"confidence\": 0.98\n    }\n  },\n  {\n    \"Description\": \"Builds and deploys AI-driven multi-agent workflows...\",\n    \"Features\": [\"Drag-and-drop editor\", \"Integration with Google Search\"],\n    \"Use Cases\": [\"Sales automation\", \"Marketing research\"],\n    \"Category\": \"Workflow Automation\",\n    \"Confidence\": 0.92,\n    \"Response\": {\n      \"categories\": [{\"name\": \"Workflow Automation\"}],\n      \"confidence\": 0.92\n    }\n  },\n  {\n    \"Description\": \"Automates engineering tasks directly on a local machine...\",\n    \"Features\": [\"Debugging automation\", \"Multi-language support\"],\n    \"Use Cases\": [\"Workflow optimization\", \"Bug fixing\"],\n    \"Category\": \"Coding\",\n    \"Confidence\": 0.88,\n    \"Response\": {\n      \"categories\": [{\"name\": \"Coding\"}],\n      \"confidence\": 0.88\n    }\n  },\n  {\n    \"Description\": \"Enables users to create custom chatbots trained on their own data...\",\n    \"Features\": [\"Multi-channel deployment\", \"CRM integration\"],\n    \"Use Cases\": [\"Customer support\", \"Lead generation\"],\n    \"Category\": \"AI Agent Builder\",\n    \"Confidence\": 0.93,\n    \"Response\": {\n      \"categories\": [{\"name\": \"AI Agent Builder\"}],\n      \"confidence\": 0.93\n    }\n  }\n]\n\n\nTool to Categorize:\nDescription: {{ $json['long-description'] }}\nFeatures:{{ $json.features }}\nUse Cases: {{ $json.usecases }}\nResponse Requirements:\n\nChoose the SINGLE most relevant category.\n\nNever invent new categories.\n\nConsider both primary functionality (description) and implementation details (features/use cases).\n\nProvide a confidence score between 0 and 1.\n\n",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -1460,
+        2740
+      ],
+      "id": "e5bf1cfb-e2b0-483a-9e10-c8c69637e986",
+      "name": "Basic LLM Chain2",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"categories\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"id\": {\n            \"type\": \"string\"\n          },\n          \"name\": {\n            \"type\": \"string\"\n          },\n          \"confidence\": {\n            \"type\": \"number\"\n          }\n        },\n        \"required\": [\"id\", \"name\", \"confidence\"]\n      }\n    }\n  },\n  \"required\": [\"categories\"]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -1340,
+        2880
+      ],
+      "id": "87d1dc93-c3c6-445c-91d9-61ddcd866cce",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -900,
+        3060
+      ],
+      "id": "d588578a-6e6a-4bad-8b85-0fe1ff3d97e7",
+      "name": "Merge4"
+    },
+    {
+      "parameters": {
+        "content": "## Categories contrast\n\nSince LLM is prone to allucinate inventing categories that are not there, we contrast categories provided by LLM with the ones in the DB",
+        "height": 340,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -980,
+        2900
+      ],
+      "id": "0bd970e3-5d67-48aa-9abb-3c681395652d",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the LLM-generated tags from item 0\nconst llmCategories = $input.first().json.output.categories || [];\n// 2. Get the “real” tags from the last item\nconst realCategories = $input.first().json.categories|| [];\n\n// 3. Filter LLM tags to keep only those that match the real tags exactly\nconst validatedCategory = llmCategories.filter((llmCategory) => {\n  return realCategories.some((realCategory) => \n     realCategory.name === llmCategory.name\n  );\n});\n\n// 4. Return the validated tags in one output item\nreturn [\n  {\n    json: {\n      validatedCategory\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        3060
+      ],
+      "id": "38e9cb67-ff75-46ba-b7f4-5d32e390d053",
+      "name": "Keep only existing categories"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1860,
+        2560
+      ],
+      "id": "25d5d040-9c44-460a-9dfe-babc03e829da",
+      "name": "Merge5",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "tableId": "listings_categories",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "listing_id",
+              "fieldValue": "={{ $json.listing_id }}"
+            },
+            {
+              "fieldId": "category_id",
+              "fieldValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2700,
+        3040
+      ],
+      "id": "04c3f89f-2135-4da4-a39b-7a4325826e44",
+      "name": "Supabase4",
+      "notesInFlow": false,
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Assign category to listing in DB",
+        "height": 300,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        2940
+      ],
+      "id": "441ae07c-8e58-48ef-9cc8-19cd21d39855",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = [];\n\n// Loop through all items passed into this node\nfor (const item of $input.all()) {\n\n  // Grab the ID you want to attach to each tag\n  const listingId = item.json.id;\n  \n  // Loop through validatedTags on this item\n  for (const category of item.json.validatedCategory || []) {\n    // Push a new item for each tag.\n    output.push({\n      json: {\n        ...category,\n        listing_id: listingId,\n      }\n    });\n  }\n}\n\n// Return one array of new items, each with its JSON data\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2300,
+        3040
+      ],
+      "id": "ba23538e-4b37-486e-9561-97adc622e056",
+      "name": "Add category id to each lisiting"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = [];\n\n// Loop through all items passed into this node\nfor (const item of $input.all()) {\n\n  // Grab the ID you want to attach to each tag\n  const listingId = item.json.id;\n  \n  // Loop through validatedTags on this item\n  for (const tag of item.json.validatedTags || []) {\n    // Push a new item for each tag.\n    output.push({\n      json: {\n        ...tag,\n        listing_id: listingId,\n      }\n    });\n  }\n}\n\n// Return one array of new items, each with its JSON data\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2360,
+        2500
+      ],
+      "id": "2f4115b8-2252-4531-a29b-9b7e12bd0cbe",
+      "name": "Add tag id to each listing id"
+    },
+    {
+      "parameters": {
+        "content": "## Decide if it's Open Source or Closed Source\n\n",
+        "height": 340,
+        "width": 1400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1580,
+        1100
+      ],
+      "id": "69fc2ecf-6bf0-488b-94b0-c74aa0f3749d",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Extract pricing links\n",
+        "height": 520,
+        "width": 580
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2860,
+        3660
+      ],
+      "id": "16ef3e2f-a982-43cb-990b-d9ef3318af87",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Add features\n\n",
+        "height": 300,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        240
+      ],
+      "id": "28483b1e-7410-42de-a4d1-58218c2395dc",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -1840,
+        4400
+      ],
+      "id": "c5fb492e-6932-4573-95c9-1b29e62b255f",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1840,
+        300
+      ],
+      "id": "62146bd3-e4ba-43ec-b53e-c410f03832ce",
+      "name": "Merge7"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n\nconst output = [];\n\nfor (const item of items) {\n  const { id, features } = item.json;\n\n  // If there's a chance 'features' or 'id' may not exist, ensure they do:\n  if (!id || !features) {\n    continue; // skip this item if invalid\n  }\n\n  // Convert each feature string into an object\n  const transformedFeatures = features.map(feature => ({\n    feature_name: feature,\n    listing_id: id,\n  }));\n\n  // Push each transformed feature as a separate output item\n  for (const f of transformedFeatures) {\n    output.push({ json: f });\n  }\n}\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        300
+      ],
+      "id": "31f5b0fd-f830-4d00-bbc6-01b1da0bac6b",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "tableId": "listings_features",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "listing_id",
+              "fieldValue": "={{ $json.listing_id }}"
+            },
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.feature_name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2280,
+        300
+      ],
+      "id": "75e3e330-35da-4f55-9839-134e5216e929",
+      "name": "Supabase5",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Add use_cases\n\n",
+        "height": 300,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        -160
+      ],
+      "id": "2d858fd7-fd14-4772-8d22-92c1839f34d4",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1840,
+        -60
+      ],
+      "id": "2f99063d-63d2-460b-8b52-cb2406ab47f5",
+      "name": "Merge8"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n\nconst output = [];\n\nfor (const item of items) {\n  const { id, usecases } = item.json;\n\n  // If there's a chance 'features' or 'id' may not exist, ensure they do:\n  if (!id || !usecases) {\n    continue; // skip this item if invalid\n  }\n\n  // Convert each feature string into an object\n  const transformedUsecases = usecases.map(usecase => ({\n    usecase_name: usecase,\n    listing_id: id,\n  }));\n\n  // Push each transformed feature as a separate output item\n  for (const f of transformedUsecases) {\n    output.push({ json: f });\n  }\n}\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        -60
+      ],
+      "id": "bc8f7cb9-ee87-43b6-b93c-eeac020a97f8",
+      "name": "Code3"
+    },
+    {
+      "parameters": {
+        "tableId": "listings_use_cases",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "listing_id",
+              "fieldValue": "={{ $json.listing_id }}"
+            },
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.usecase_name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2280,
+        -60
+      ],
+      "id": "6ae5a1ed-e41a-478c-bdc1-1820b72cee3c",
+      "name": "Supabase6",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// The 'items' array is provided by n8n automatically\n// We will create an output array, but first we'll group results by URL using a map/object.\n\nconst output = [];\n\nfor (const item of items) {\n  // Retrieve HTML from input\n  const html = item.json.data || \"\";\n\n  // Regex that captures:\n  //  1. href URL as the first group\n  //  2. The anchor text between <a>...</a> as the second group\n  // 's' (dotAll) allows . to match newlines\n  // 'i' makes matching case-insensitive\n  // 'g' finds all occurrences\n  const linkRegex = /<a[^>]*href\\s*=\\s*[\"']([^\"']+)[\"'][^>]*>(.*?)<\\/a>/gis;\n\n  // We'll store unique links in a map: { [url]: Set of anchor texts }\n  const linksMap = {};\n  let match;\n\n  while ((match = linkRegex.exec(html)) !== null) {\n    const href = match[1].trim();\n    // Remove any nested tags from anchor text & trim\n    const anchorText = match[2]\n      .replace(/<[^>]*>/g, '')  // Remove remaining HTML tags\n      .trim();\n\n    // Initialize if not present\n    if (!linksMap[href]) {\n      linksMap[href] = new Set();\n    }\n    // Add this anchor text to the set\n    linksMap[href].add(anchorText);\n  }\n\n  // Convert the map to an array of objects\n  // Each object: { url, texts: [\"Text1\", \"Text2\", ...] }\n  const linksArray = Object.entries(linksMap).map(([url, textsSet]) => {\n    return {\n      url,\n      texts: Array.from(textsSet),\n    };\n  });\n\n  // Push a single output item containing all links for this input item\n  output.push({\n    json: {\n      links: linksArray\n    }\n  });\n}\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3260,
+        3460
+      ],
+      "id": "341c3b8a-8ef0-440d-8962-15eb05c9d060",
+      "name": "Code4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Your task is to extract the link that contains pricing information of a tool.\n\nYou will be provided an array of links that are present in the homepage of the tool and the texts associated with each link:\n\n<list>{{ JSON.stringify($json.links) }}</list>\n\nRespond directly with the link that contains pricing information. If there's no link that contains pricing information, return as boolean pricing_exists=false.\n\n1st example of response format:\n{\n  \"pricing_exists\": false,\n  \"link\": \"\"\n}\n\n2nd example of response format:\n{\n  \"pricing_exists\": true,\n  \"link\": \"https://example-com/pricing\"\n}\n",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -2720,
+        3760
+      ],
+      "id": "ff7a4b27-096d-4564-8f2c-d228951b1e96",
+      "name": "Basic LLM Chain4",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2501",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -2680,
+        3980
+      ],
+      "id": "4910e5e9-3922-4fb0-b4bc-a8f99815e92c",
+      "name": "Mistral Cloud Chat Model2",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "3pMWLg50ePyURoh0",
+          "name": "GMAIL@danifuya - Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"pricing_exists\": {\n\t\t\t\"type\": \"boolean\"\n\t\t},\n\t\"link\":  {\n\t\t\t\"type\": \"string\"\n\t\t}\n\t}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -2480,
+        3980
+      ],
+      "id": "deb36d9b-f1f4-4a38-a51c-e730e0b5b685",
+      "name": "Structured Output Parser3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "994ffd07-23b3-4428-a277-4163020232e6",
+              "leftValue": "={{ $json.output.pricing_exists }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "ab7a68b7-df89-4419-97c1-47e0d70b14ea",
+              "leftValue": "={{ $json.output.link }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2400,
+        3760
+      ],
+      "id": "e80ae4e7-a749-4cd8-9218-bd8f4fb6dfb4",
+      "name": "If",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.output.link }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1760,
+        3800
+      ],
+      "id": "ba04331c-0cb3-4bf6-b8f3-894eaca77f4b",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and process the HTML content\nfor (const item of $input.all()) {\n  if (item.json.data) {\n    let html = item.json.data;\n    \n    // Remove script and style tags and their content\n    html = html.replace(/<script\\b[^<]*(?:(?!<\\/script>)<[^<]*)*<\\/script>/gi, '');\n    html = html.replace(/<style\\b[^<]*(?:(?!<\\/style>)<[^<]*)*<\\/style>/gi, '');\n    \n    // Remove navigation, header, footer, and other common irrelevant elements\n    const elementsToRemove = [\n       'header','footer', 'sidebar',\n      'advertisement', 'banner', 'menu',\n      'social-links', 'related-posts', 'comments',\n      'cookie-notice', 'popup', 'navigation'\n    ];\n    \n    elementsToRemove.forEach(elem => {\n      const regex = new RegExp(`<(div|section|aside)([^>]*?)(class|id)=[\"'][^\"']*?(${elem})[^\"']*?[\"'][^>]*?>([\\\\s\\\\S]*?)<\\/\\\\1>`, 'gi');\n      html = html.replace(regex, '');\n    });\n    \n    // Convert common HTML entities\n    html = html.replace(/&nbsp;/g, ' ')\n               .replace(/&amp;/g, '&')\n               .replace(/&lt;/g, '<')\n               .replace(/&gt;/g, '>');\n    \n    // Remove all remaining HTML tags\n    html = html.replace(/<[^>]+>/g, ' ');\n    \n    // Clean up whitespace\n    html = html.replace(/\\s+/g, ' ')\n               .replace(/^\\s+|\\s+$/g, '');\n    \n    // Store the cleaned content back in the item\n    item.json.data = html;\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1580,
+        3800
+      ],
+      "id": "352f319c-cfc3-4fef-a2c1-54a8c6cb52cb",
+      "name": "Code5"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Your task is to extract the monthly pricing tiers of the following tool\n\nYou will be provided unstructured data\n<data>{{ $json.data }}</data>\n\nFirst detect all pricing tiers per month. If there's a free tier return 0 as monthly amount for that pricing tier.\nIf there are no tiers, return empty array.\n\nOnly return monthly amounts.\nDo not return prcing tier name.\n",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -1280,
+        3800
+      ],
+      "id": "1f9ed9d4-467c-4121-b1c2-42b7b540dfb9",
+      "name": "Basic LLM Chain5"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2501",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -1220,
+        4100
+      ],
+      "id": "fae2c464-afd9-47e3-8f89-d61854bc4f63",
+      "name": "Mistral Cloud Chat Model5",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "CAZyYGFgbDf8Y0gu",
+          "name": "essec@dani  -Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"prices\": {\n      \"type\": \"array\",\n      \"properties\":{\n      \"items\": {\n        \"type\": \"string\"\n        }\n      }\n       \n    }\n  },\n  \"required\": [\"prices\"]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -1080,
+        4100
+      ],
+      "id": "c75982f5-26b8-4886-9fe6-2f2e074b005c",
+      "name": "Structured Output Parser4"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2120,
+        3800
+      ],
+      "id": "531a6101-0f75-4fce-b85f-33f6525d1a9f",
+      "name": "Merge9"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = [];\n\nfor (const item of items) {\n  const {id} = item.json;\n    const {prices} = item.json.output;\n\n  // If there's a chance 'prices' or 'id' may not exist, skip\n  if (!id || !prices) {\n    continue;\n  }\n\n  // Convert each price (string/number) into an object with price_name and listing_id\n  const transformedPrices = prices.map(price => ({\n    price: price,\n    listing_id: id,\n  }));\n\n  // Push each transformed price as a separate output item\n  for (const p of transformedPrices) {\n    output.push({\n      json: p\n    });\n  }\n}\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        3800
+      ],
+      "id": "9d85f5db-51d4-4ecc-bf53-78d30c881336",
+      "name": "Code7"
+    },
+    {
+      "parameters": {
+        "tableId": "pricing_tiers",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "listing_id",
+              "fieldValue": "={{ $json.listing_id }}"
+            },
+            {
+              "fieldId": "price",
+              "fieldValue": "={{ $json.price }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        3800
+      ],
+      "id": "49faf576-8e50-4cd6-b70a-6ef9029bca3c",
+      "name": "Supabase7",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Pricing link exists",
+        "height": 340,
+        "width": 1060
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1880,
+        3680
+      ],
+      "id": "915178a0-12fd-4e80-aafc-e6ef3d56834a",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Add pricings detected from pricing page\n\n",
+        "height": 300,
+        "width": 740
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        3680
+      ],
+      "id": "d0a093d1-9d84-4bd0-bd4a-c15a159af6e6",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f29dff40-581a-4dd7-a546-d9729d1ffc84",
+              "leftValue": "={{ $json.open_source }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1300,
+        1240
+      ],
+      "id": "ce837ada-43c1-4979-a820-b11d5b4a0ff4",
+      "name": "If2",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -1500,
+        1240
+      ],
+      "id": "5fad9940-75e7-461f-b842-cb0c9be198c4",
+      "name": "Merge6"
+    },
+    {
+      "parameters": {
+        "content": "## Extract links from homepage\n",
+        "height": 320,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3420,
+        3400
+      ],
+      "id": "52c826c0-c134-47dc-aaa1-efc8b22f003d",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * In n8n, add a \"Function\" node and use this code.\n * This expects the item to look like your sample array structure:\n * [\n *   {\n *     \"links\": [\n *       { \"url\": \"https://www.getailicia.com\", ... },\n *       ...\n *       { \"url\": \"https://github.com/mendableai/firecrawl\", ... },\n *       ...\n *     ],\n *     ...\n *   }\n * ]\n */\n\nconst output = [];\n\n// 1) Access the first incoming item\nlet inputData = items[0].json;\n\n// 2) If the incoming data is an array (like your sample), assume the object of interest is at index 0\nif (Array.isArray(inputData)) {\n  inputData = inputData[0];\n}\n\n// 3) Find the link in the \"links\" array that contains \"github.com\"\nlet githubLink = null;\nif (inputData?.links?.length) {\n  const foundLink = inputData.links.find(link => link.url.includes('github.com'));\n  if (foundLink) {\n    githubLink = foundLink.url;\n  }\n}\n\n// 4) Return the GitHub link (or null if not found)\noutput.push({\n  json: {\n    githubLink\n  }\n});\n\n// 5) Return the resulting data to n8n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -920,
+        1220
+      ],
+      "id": "c3f02777-8225-46e9-a71f-8d5553c2bdb5",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -780,
+        1680
+      ],
+      "id": "6810c46b-6ca8-462a-a78b-93c6fbb2fcc8",
+      "name": "Merge12",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "content": "## Name",
+        "height": 340,
+        "width": 760
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -5860,
+        440
+      ],
+      "id": "14b958c3-acd7-4bfc-8959-407185812391",
+      "name": "Sticky Note14"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4b0e8d13-9648-4dbb-b8f5-c36775387564",
+              "leftValue": "={{ $json.githubLink }}",
+              "rightValue": "github.com",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -620,
+        1220
+      ],
+      "id": "bb96a4d7-68cd-44df-8b89-9c45b2ebe2ef",
+      "name": "If3",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4b0e8d13-9648-4dbb-b8f5-c36775387564",
+              "leftValue": "={{ $json.open_source_id }}",
+              "rightValue": "github.com",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2960,
+        1200
+      ],
+      "id": "0c1694e6-b8a1-47d9-bd5a-81c0e7c3768f",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "source_types",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "slug",
+              "keyValue": "open-source"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1880,
+        1100
+      ],
+      "id": "10fa8ad7-a925-4589-ad82-b63b8434e07c",
+      "name": "Supabase10",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * In n8n, add a \"Function\" node and use this code.\n * This expects an input array of objects like so:\n * [\n *   {\n *     \"id\": \"5bdfd2c2-be04-4c78-b840-e9fe83cea792\",\n *     \"name\": \"Open Source\",\n *     \"slug\": \"open-source\",\n *     \"created_at\": \"2024-10-13T10:44:07.287908+00:00\",\n *     \"updated_at\": \"2024-10-13T10:44:07.287908+00:00\"\n *   }\n * ]\n */\n\nconst output = [];\n\n// 1) Read the first incoming item\nlet inputData = items[0].json;\n\n// 2) If the incoming data is an array, assume the object of interest is at index 0\nif (Array.isArray(inputData)) {\n  inputData = inputData[0];\n}\n\n// 3) Create a new object with the desired fields\noutput.push({\n  json: {\n    open_source_id: inputData.id,\n    open_source_name: inputData.name\n  }\n});\n\n// 4) Return this data as the result\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        1120
+      ],
+      "id": "8c2d32cb-2ded-4ed2-ba43-e21737674e3a",
+      "name": "Code10"
+    },
+    {
+      "parameters": {
+        "content": "## Get Open Source types\n",
+        "height": 240,
+        "width": 580
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        1020
+      ],
+      "id": "69743326-89ee-4c02-baaa-849317023045",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "tableId": "listings_source_types",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "listing_id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "source_type_id",
+              "fieldValue": "={{ $json.open_source_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3280,
+        1180
+      ],
+      "id": "fb8e80ff-a872-4360-97f0-9694017b7731",
+      "name": "Supabase9",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Add Open Source type to listing\n\n",
+        "height": 280,
+        "width": 860
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2640,
+        1140
+      ],
+      "id": "038e2b43-d909-4a72-adaf-1235df39260e",
+      "name": "Sticky Note16"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2700,
+        1200
+      ],
+      "id": "6bf56ced-a3f3-4b0e-864b-da2171b6572a",
+      "name": "Merge13"
+    },
+    {
+      "parameters": {
+        "content": "## Tag assignment\n\nSince LLM is prone to allucinate inventing tags that are not there, we contrast tags provided by LLM with the ones in the DB",
+        "height": 340,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        2540
+      ],
+      "id": "333f4f30-7882-4062-94a0-60f7f571d292",
+      "name": "Sticky Note17"
+    },
+    {
+      "parameters": {
+        "content": "## Categories assignment\n\nSince LLM is prone to allucinate inventing tags that are not there, we contrast tags provided by LLM with the ones in the DB",
+        "height": 340,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1700,
+        2620
+      ],
+      "id": "219794ab-e0d6-4989-98b3-ca5534ed892e",
+      "name": "Sticky Note18"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"properties\": {\n    \n        \"name\": {\n          \"type\": \"string\"\n        },\n        \"open_source\": {\n          \"type\": \"boolean\"\n        },\n     \"confidence_open_source\": {\n          \"type\": \"number\"\n        }\n        \n  },\n  \"required\": [\n        \"name\",\n        \"open-source\",\n    \"confidence_open_source\"\n       \n      ]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -5440,
+        680
+      ],
+      "id": "22ee59e2-b746-4c33-bb99-b4ff629c9009",
+      "name": "Structured Output Parser5"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1820,
+        3060
+      ],
+      "id": "86c950ca-8f51-4d54-894c-f70227de69d0",
+      "name": "Merge14",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "zYaezgfJctS19y3F",
+          "mode": "list",
+          "cachedResultName": "Image Uploader to Supabase"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2100,
+        2040
+      ],
+      "id": "ce69764f-25bf-427c-9c27-c9d2cc77f85d",
+      "name": "Execute Image Uploader",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1860,
+        2040
+      ],
+      "id": "3dcdb596-6e31-48ef-aec4-a73784b76e3b",
+      "name": "Merge15"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "listings",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "logo_url",
+              "fieldValue": "=https://yvgmusqljscajoqbuxdu.supabase.co/storage/v1/object/public/{{ $json.body.Key }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2540,
+        1980
+      ],
+      "id": "1db06e72-5e99-4d13-bf00-f2802f02a2ec",
+      "name": "Supabase1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2300,
+        1980
+      ],
+      "id": "1d771d4c-ac71-4302-a510-fd37cc7c7ffc",
+      "name": "Merge16"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1140,
+        3800
+      ],
+      "id": "5a143c94-3a37-4baa-9455-83f8109871be",
+      "name": "Sticky Note19"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an excellent information collector and summarizer. You create  content that will be listed as a page for an AI agent directory. You will be given unstructured information extracted from a landing page that offers AI Agent services. Your task is to condense and organize this information into a short description.  \nContent Guidelines:  \n1- Use clear, concise, easy-to-understand language. Never use the word “ai-powered.” \n2-Short description (max 8 words, a brief, should answer the questions what is the service and what it is used for).  \n3- Do not include the name of the agent\n4- Do not use hyphenated words\nAvoid filler words.\nExmaples of short description considered good:\n[\n  \"SEO agent for advanced keyword research.\",\n  \"Executive assistant for managing tasks via WhatsApp.\",\n  \"Platform for developing and deploying intelligent agents.\",\n  \"Automated assistant for corporate event planning.\",\n  \"Automated assistant for daily task management.\",\n\"Framework for building AI agents with memory and tools\"\n  \"Platform for creating full-stack applications using natural language.\",\n\"AI sales agent for automated B2B lead generation.\",\n\"Framework for creating AI agents with simplified logic.\",\n\"AI agent for automating LinkedIn outreach.\",\n\"AI sales agent for automated B2B lead generation\",\n\"AI coding agent that enhances developer flow.\"]\n\n<unstructured_data>{{ $json.data }}</unstrucutured_data>",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -5680,
+        960
+      ],
+      "id": "8e7c5ef1-0678-4c20-89c8-31cba1efe896",
+      "name": "Basic LLM Chain6",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2501",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -5640,
+        1140
+      ],
+      "id": "2889a861-defa-4e3b-bd85-28eae23ba679",
+      "name": "Mistral Small1",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "5fKpZ59uCWRn9qAm",
+          "name": "BAIA@info - Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Short description\n",
+        "height": 340,
+        "width": 760
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -5860,
+        900
+      ],
+      "id": "344f2d3b-a206-4346-925f-1478feeb2626",
+      "name": "Sticky Note23"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"properties\": {\n        \"short-description\": {\n          \"type\": \"string\"\n        }\n    },\n      \"required\": [\n        \"short-description\"\n      ]\n \n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -5480,
+        1140
+      ],
+      "id": "1f7e79d7-30c2-4cd0-98c3-742df70b1419",
+      "name": "Structured Output Parser7"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a summarization expert specializing in AI agents. You create  content that will be listed as a page for an AI agent directory. Your task is to read unstructured website content about an AI agent/framework/platorm and generate a concise, detailed description of the agent.\n\nRequirements:\nContent Guidelines:\n\nClearly describe what the AI agent does and its core purpose without repeating information.\nUse a professional and informative tone similar to the examples below.\nStart with \"%name is an AI agent/platform, etc etc\".\nUse keywords that have potential to be high-volume keywords.\nDo not include pricing information\nMaximum 100 words\n\nStyle Examples:\n\nExample 1:\n\"Convergence is an automated assistant designed to streamline daily tasks. Users can delegate activities such as scheduling, email management, and data entry through simple conversational prompts. Convergence executes these tasks efficiently, allowing users to focus on more critical responsibilities. The platform offers a free tier with limited sessions and a Pro subscription at $20 per month for unlimited access and additional features. Proxy is currently in beta and aims to enhance productivity for professionals, managers, researchers, and developers.\"\n\nExample 2:\n\"Chatthing is a platform that enables users to create custom chatbots powered by ChatGPT, trained on their own data sources such as Notion, websites, and more. It offers advanced features beyond standard GPT models, including multi-channel deployment across websites, apps, Discord, Slack, and other platforms. Chatthing provides tools to automate customer support, lead generation, content creation, and other tasks, aiming to save businesses time and enhance efficiency.\"\n\nExample 3:\n\"Qodex.ai is a platform designed to streamline API testing and documentation through automation. It allows users to write test cases in plain English, eliminating the need for coding, and ensures tests stay updated as the product evolves. Additionally, its interactive API documentation lets users ask questions and receive instant answers, boosting development efficiency and product quality.\"\n\nExample 4:\n\"Reachy.ai is an agent designed to automate LinkedIn outreach, helping users build partnerships, hire talent, and generate leads. Operating as a desktop application, it prioritizes user privacy and account safety by avoiding browser-based extensions. With features such as personalized messaging, multi-account management, and integration with AI models like GPT-4, Reachy.ai assists professionals in scaling their networks and acquiring customers efficiently.\"\n\nExample 5:\n\"CopyCat is a tool designed to automate repetitive browser-based tasks by recording standard operating procedures (SOPs) and converting them into reusable workflows. It simplifies manual processes and boosts efficiency for web-based activities, supporting Apple Silicon Macs on macOS 13.6 or later.\"\n\nExample 6:\n\"co.dev enables users to build scalable full-stack applications using natural language descriptions. It generates production-ready code with modern technologies like Next.js and Supabase, offering built-in modules for authentication and database integration. Designed for both developers and non-developers, co.dev strikes a balance between no-code simplicity and full-code flexibility, streamlining rapid web application development.\"\n\nInstructions:\n\nAnalyze the provided unstructured text about an AI agent.\nSummarize the main points following the guidelines above.\nDo not include any extra commentary, headings, or markdown formatting—only output the JSON object.\nNow, summarize the following text:\n\n{{ $json.data }}",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -5700,
+        1380
+      ],
+      "id": "02e680bb-e3ae-481b-b75f-a0c4f9c23f0a",
+      "name": "Basic LLM Chain8",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2501",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -5640,
+        1540
+      ],
+      "id": "6b41775b-b458-4ca2-8383-df537ab158b8",
+      "name": "Mistral Small2",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "CAZyYGFgbDf8Y0gu",
+          "name": "essec@dani  -Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Long description\n",
+        "height": 340,
+        "width": 760
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -5860,
+        1260
+      ],
+      "id": "bddbd605-a924-4379-b0a4-924c4d1824b3",
+      "name": "Sticky Note24"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"properties\": {\n        \"long-description\": {\n          \"type\": \"string\"\n        }\n    },\n      \"required\": [\n        \"long-description\"\n      ]\n \n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -5400,
+        1460
+      ],
+      "id": "d8fda022-6053-4004-8e66-f63552f993af",
+      "name": "Structured Output Parser8"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an information extraction expert. You create content that will be listed as a page for an AI agent directory. Your task is to read unstructured text about an AI agent and extract key product features. \nOutput Requirements:\nNumber of Features: Extract between 4 and a maximum of 8 features.\nQuality: They should be relevant and concise.\nWord Limit: Each feature must be expressed in 2 to 5 words.\nCapitalization: Each feature must start with a capital letter.\n\nUse the following examples for inspiration and reference\nFor example:\n\nAgent 1: \"Multi-channel deployment\", \"Personalized support\", \"Training on various data sources\", \"Advanced features beyond standard GPTs\", \"Custom ChatGPT bots\".\nAgent 2: \"Automated API testing\", \"Seamless integration with development workflows\", \"Plain English test case creation\", \"Auto-updating tests\", \"Interactive API documentation\".\nAgent 3: \"Integration with development workflows\", \"Support for web interfaces and backend APIs\", \"Real-time synchronization with code changes\", \"Automated test generation\", \"Comprehensive test coverage\".\nAgent 4: \"Personalized AI-generated messages\", \"Automated LinkedIn outreach\", \"Integration with AI models\", \"Desktop application for enhanced security\", \"Multi-account management\".\nAgent 5: \"Agent-to-agent collaboration\", \"Awareness of organizational context\", \"Safe execution of tasks\", \"Integration with various tools and platforms\", \"Automation of diverse business processes\".\nAgent 6: \"Generation of multi-file code changes\", \"Code style matching\", \"Integration with popular IDEs\", \"Editable implementation plans\", \"Automatic context file identification\".\nAgent 7: \"Competitor analysis\", \"Third-party data integration\", \"Search intent analysis\", \"Automated content outline creation\", \"Integration with Google Search Console\".\nAgent 8: \"Meeting scheduling\", \"Email drafting\", \"Voice note transcription\", \"Research assistance\", \"Task lists and reminders\".\n\nInstructions:\n\nRead the provided unstructured text about an AI agent.\nExtract all the key features mentioned in the text using the guidelines and examples above.\nNow, extract the features from the following text:\n\n{{ $json.data }}",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -5660,
+        1720
+      ],
+      "id": "3e361822-6c8e-40b0-bbd8-7225e9e75d4a",
+      "name": "Basic LLM Chain10",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2501",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -5620,
+        1900
+      ],
+      "id": "76c5fe45-72c7-4db9-a8fe-571447577274",
+      "name": "Mistral Small4",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "3pMWLg50ePyURoh0",
+          "name": "GMAIL@danifuya - Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Features\n",
+        "height": 340,
+        "width": 760
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -5840,
+        1680
+      ],
+      "id": "a6fbf3d0-fdf1-421d-844c-89e388a00caa",
+      "name": "Sticky Note26"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"properties\": {\n        \"features\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        }\n    },\n      \"required\": [\n        \"features\"\n      ]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -5460,
+        1920
+      ],
+      "id": "7f09bd52-6b78-4966-988e-311eeabb80ec",
+      "name": "Structured Output Parser10"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an information extraction expert. You create content that will be listed as a page for an AI agent directory Your task is to read unstructured text about an AI agent and extract the key use cases .\n\nOutput Requirements:\n\nNumber of Use Cases: Extract a minimum of 4 and a maximum of 8 use cases.\nQuality: They should be relevant and concise.\nWord Limit: Each use case must be expressed in 2 to 5 words.\nCapitalization: Each use case must start with a capital letter.\nUniqueness: Ensure that each use case is distinct and mutually exclusive. Avoid redundancy or overlapping meanings.\nDo not include features\n\nUse the following examples for inspiration and reference:\n\nAgent A:\n\n\"Lead Generation\"\n\"Enhancing user engagement\"\n\"Automating customer support\"\n\nAgent B:\n\n\"Simplifying API documentation\"\n\"Automating API testing\"\n\"Enhancing development efficiency\"\n\"Reducing manual testing efforts\"\n\"Improving product quality\"\nAgent C:\n\n\"Accelerating software release cycles\"\n\"Testing web interfaces\"\n\"Ensuring codebase reliability\"\n\"Automating API testing\"\nAgent D:\n\n\"Talent acquisition\"\n\"Network expansion\"\n\"Lead generation\"\n\"Partnership building\"\n\"Customer engagement\"\nAgent E:\n\n\"Employees Onboarding\"\n\"Streamlining CRM operations\"\n\"Automating marketing tasks\"\n\"Managing billing processes\"\n\"Generating financial reports\"\n\nAgent F:\n\n\"New feature development\"\n\"Bug fixing\"\n\"Code Refactoring\"\n\"Test Creation\"\n\"Onboarding new developers\"\n\nAgent G:\n\n\"Optimizing content for search engines\"\n\"Improving online visibility\"\n\"Enhancing SEO strategies\"\n\"Conducting competitor analysis\"\n\"Identifying high-potential keywords\"\nAgent H:\n\n\"Managing daily tasks\"\n\"Conducting quick research\"\n\"Drafting professional emails\"\n\"Transcribing voice notes\"\n\"Scheduling meetings\"\nInstructions:\n\nRead the provided unstructured text about an AI agent. Extract all the key use cases mentioned in the text using the guidelines and examples above.\n<unstructured_data>{{ $json.data }}</unstrucutured_data>",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -5660,
+        2100
+      ],
+      "id": "303fa7a6-e0cd-4acc-a675-48bdd23407e7",
+      "name": "Basic LLM Chain12",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2501",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -5640,
+        2300
+      ],
+      "id": "63c3b278-aeca-4353-aff0-dd15e7effbd6",
+      "name": "Mistral Small6",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "5fKpZ59uCWRn9qAm",
+          "name": "BAIA@info - Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Use Cases\n",
+        "height": 340,
+        "width": 760
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -5840,
+        2060
+      ],
+      "id": "959ec860-ffe6-41c4-a274-649057116a9a",
+      "name": "Sticky Note28"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"properties\": {\n        \"usecases\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        }\n    },\n      \"required\": [\n        \"usecases\"\n      ]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -5460,
+        2300
+      ],
+      "id": "00fec75b-7094-45ca-a6e4-f9b677aa70b4",
+      "name": "Structured Output Parser12"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 5,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -4440,
+        1400
+      ],
+      "id": "723d2746-76e3-45fa-9963-9326f7994ebe",
+      "name": "Merge18"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yvgmusqljscajoqbuxdu.supabase.co/rest/v1/rpc/n8n_get_tags_by_category_name",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "_category_name",
+              "value": "={{ $json.validatedCategory[0].name }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -220,
+        2920
+      ],
+      "id": "9a87656a-570f-4512-ad4c-84f6304b55bc",
+      "name": "HTTP Request2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        260,
+        2580
+      ],
+      "id": "a867802f-d7b5-444a-a51c-a0670f829038",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nitems.forEach(item => {\n  let link = item.json.output.link || '';\n  let website = item.json.website || '';\n\n  // 1. Remove everything after '?' (query params)\n  // 2. Remove any trailing slash(es)\n  const cleanedWebsite = website\n    .split('?')[0]         // remove query params\n    .replace(/\\/+$/, '');  // remove all trailing slashes\n\n  // If link is already absolute (e.g., starts with https://), skip\n  if (/^https:\\/\\//.test(link)) {\n    return items;\n  }\n\n  // Ensure relative link starts with a single slash (if non-empty)\n  if (link && !link.startsWith('/')) {\n    link = '/' + link;\n  }\n\n  // Combine the cleaned website URL with the relative path\n  item.json.output.link = cleanedWebsite + link;\n});\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1960,
+        3780
+      ],
+      "id": "fc4577a2-cbc5-4ebc-bb3f-aeb092bd3db0",
+      "name": "Code13"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -2140,
+        3720
+      ],
+      "id": "f7f5077c-5a70-46c0-9c2a-41b343c14026",
+      "name": "Merge20"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e8004a99-70a8-4eeb-909f-2b401d7b910e",
+              "leftValue": "{{ $items(0).length > 0 }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -340,
+        1160
+      ],
+      "id": "6b457669-fa7c-4584-8f69-fd44104e6db4",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2060,
+        4280
+      ],
+      "id": "85ee2514-af54-4c82-9dcd-5c06b894653c",
+      "name": "Merge10"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = [];\n\nfor (const item of items) {\n  const {id} = item.json;\n    const {prices} = item.json.output;\n\n  // If there's a chance 'prices' or 'id' may not exist, skip\n  if (!id || !prices) {\n    continue;\n  }\n\n  // Convert each price (string/number) into an object with price_name and listing_id\n  const transformedPrices = prices.map(price => ({\n    price: price,\n    listing_id: id,\n  }));\n\n  // Push each transformed price as a separate output item\n  for (const p of transformedPrices) {\n    output.push({\n      json: p\n    });\n  }\n}\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2280,
+        4280
+      ],
+      "id": "e7360598-47a3-433b-8c86-ba6cfe2a933f",
+      "name": "Code8"
+    },
+    {
+      "parameters": {
+        "tableId": "pricing_tiers",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "listing_id",
+              "fieldValue": "={{ $json.listing_id }}"
+            },
+            {
+              "fieldId": "price",
+              "fieldValue": "={{ $json.price }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2500,
+        4280
+      ],
+      "id": "c7bfc134-756a-484c-b30c-7d7eb3d258ca",
+      "name": "Supabase8",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Add pricings detected from landing page\n\n",
+        "height": 300,
+        "width": 740
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2020,
+        4160
+      ],
+      "id": "0756dff5-eb25-4444-9d1f-b4b5fd646740",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Your task is to extract the monthly pricing tiers of the following tool\n\nYou will be provided unstructured data\n<data>{{ $json.data }}</data>\n\nFirst detect all pricing tiers per month. If there's a free tier return 0 as monthly amount for that pricing tier.\nIf there are no tiers, return empty array.\n\nOnly return monthly amounts.\nDo not return prcing tier name.\n",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -1240,
+        4420
+      ],
+      "id": "11ba56ca-0b33-41aa-b28a-753ad2c00cd4",
+      "name": "Basic LLM Chain7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yvgmusqljscajoqbuxdu.supabase.co/rest/v1/rpc/n8n_get_all_categories",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2320,
+        2780
+      ],
+      "id": "d6583804-d167-4a4b-929b-a85ada6d7ad6",
+      "name": "HTTP Request3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "source_types",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "slug",
+              "keyValue": "closed-source"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1860,
+        800
+      ],
+      "id": "afde26a6-d02b-4dbf-a2a3-596f180ed41e",
+      "name": "Supabase11",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * In n8n, add a \"Function\" node and use this code.\n * This expects an input array of objects like so:\n * [\n *   {\n *     \"id\": \"5bdfd2c2-be04-4c78-b840-e9fe83cea792\",\n *     \"name\": \"Open Source\",\n *     \"slug\": \"open-source\",\n *     \"created_at\": \"2024-10-13T10:44:07.287908+00:00\",\n *     \"updated_at\": \"2024-10-13T10:44:07.287908+00:00\"\n *   }\n * ]\n */\n\nconst output = [];\n\n// 1) Read the first incoming item\nlet inputData = items[0].json;\n\n// 2) If the incoming data is an array, assume the object of interest is at index 0\nif (Array.isArray(inputData)) {\n  inputData = inputData[0];\n}\n\n// 3) Create a new object with the desired fields\noutput.push({\n  json: {\n    open_source_id: inputData.id,\n    open_source_name: inputData.name\n  }\n});\n\n// 4) Return this data as the result\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        820
+      ],
+      "id": "a1c2df11-a1d4-42ed-8cdd-08e60223a200",
+      "name": "Code12"
+    },
+    {
+      "parameters": {
+        "content": "## Get Closed Source types\n",
+        "height": 240,
+        "width": 580
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        720
+      ],
+      "id": "a0efdaa3-0f9b-40f7-b233-b0dc81909bb9",
+      "name": "Sticky Note25"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4b0e8d13-9648-4dbb-b8f5-c36775387564",
+              "leftValue": "={{ $json.open_source_id }}",
+              "rightValue": "github.com",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2920,
+        820
+      ],
+      "id": "a1d8ba6f-4e49-4f2c-9603-9588c6df712f",
+      "name": "If5"
+    },
+    {
+      "parameters": {
+        "tableId": "listings_source_types",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "listing_id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "source_type_id",
+              "fieldValue": "={{ $json.open_source_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3240,
+        800
+      ],
+      "id": "69a77ccc-bb1a-4884-9cda-c7620510372d",
+      "name": "Supabase12",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2660,
+        820
+      ],
+      "id": "295ceda0-c22e-4083-81e2-f6c4fc6e5d3c",
+      "name": "Merge17"
+    },
+    {
+      "parameters": {
+        "content": "## Add Closed Source type to listing\n\n",
+        "height": 280,
+        "width": 860
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2580,
+        720
+      ],
+      "id": "07ab0d0c-071f-469e-8448-fa5992cfba1a",
+      "name": "Sticky Note27"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -7800,
+        2700
+      ],
+      "id": "f66afba4-a3d8-405f-8b71-801db6a47b5c",
+      "name": "When chat message received",
+      "webhookId": "36ee0159-14fc-4450-9f64-3d359f521e57"
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Your task is to collect information from user. Extract website url and image url from user message"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -7580,
+        2700
+      ],
+      "id": "4dd6a147-6139-4109-9085-2d592b4971af",
+      "name": "Basic LLM Chain3"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2501",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -7540,
+        2920
+      ],
+      "id": "7d164046-c731-4dbc-ad0b-7ce7bc062c9d",
+      "name": "Mistral Cloud Chat Model3",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "3pMWLg50ePyURoh0",
+          "name": "GMAIL@danifuya - Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"website\": {\n\t\t\t\"type\": \"string\"\n\t\t},\n\t\t\"img_url\": {\n\t\t\t\"type\": \"string\"\n\t\t\t\n\t\t}\n\t},\n  \"required\": [\"website\",\"img_url\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -7400,
+        2900
+      ],
+      "id": "5501d4dc-4c6e-4fef-a90e-2a16004c60c3",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Iterate over each input item and extract website_url and img_url\nreturn items.map(item => {\n  const { website, img_url } = item.json.output;\n  return {\n    json: {\n      website,\n      img_url,\n    },\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6920,
+        2740
+      ],
+      "id": "77c6de7a-9b77-4d79-acf3-9e95d55ffce9",
+      "name": "Code6"
+    },
+    {
+      "parameters": {
+        "content": "## Pricing link does not exist, try to extract pricing from landing page\n",
+        "height": 420,
+        "width": 1060
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1880,
+        4320
+      ],
+      "id": "0e045bc8-b5c1-48cc-9051-6723e651b2ba",
+      "name": "Sticky Note21"
+    },
+    {
+      "parameters": {
+        "content": "## Insert image into DB\n\n",
+        "height": 340,
+        "width": 960
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        1900
+      ],
+      "id": "2c2c948e-02f5-444b-bb4e-56e0948d8e23",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "# Chat interface",
+        "height": 1220,
+        "width": 960,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -7940,
+        2240
+      ],
+      "id": "a0da5659-7049-4b0a-9da9-8896335f3b32",
+      "name": "Sticky Note22"
+    },
+    {
+      "parameters": {
+        "content": "# Information extraction and classification",
+        "height": 5240,
+        "width": 8580,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -6940,
+        -40
+      ],
+      "id": "4c94d3b8-2c59-4754-b536-f5d81f7ea653",
+      "name": "Sticky Note30"
+    },
+    {
+      "parameters": {
+        "content": "# Database inserts",
+        "height": 5480,
+        "width": 2140,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1720,
+        -280
+      ],
+      "id": "44c5787f-e8a8-4b62-b254-d9ac522cda7d",
+      "name": "Sticky Note31"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Basic LLM Chain6",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Basic LLM Chain12",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Basic LLM Chain10",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Basic LLM Chain8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Merge18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase": {
+      "main": [
+        [
+          {
+            "node": "Merge5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge7",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Merge8",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Merge9",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge13",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Merge14",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge15",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge16",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge10",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge17",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Structure data": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge7",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge8",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Merge12",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add slug": {
+      "main": [
+        [
+          {
+            "node": "Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structure data1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Mistral Small": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Keep only existing tags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep only existing tags": {
+      "main": [
+        [
+          {
+            "node": "Merge5",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain2": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge4": {
+      "main": [
+        [
+          {
+            "node": "Keep only existing categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep only existing categories": {
+      "main": [
+        [
+          {
+            "node": "Merge14",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge5": {
+      "main": [
+        [
+          {
+            "node": "Add tag id to each listing id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add category id to each lisiting": {
+      "main": [
+        [
+          {
+            "node": "Supabase4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add tag id to each listing id": {
+      "main": [
+        [
+          {
+            "node": "Supabase2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge7": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Supabase5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge8": {
+      "main": [
+        [
+          {
+            "node": "Code3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code3": {
+      "main": [
+        [
+          {
+            "node": "Supabase6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code4": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain4": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain4",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Merge20",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code5": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain5": {
+      "main": [
+        [
+          {
+            "node": "Merge9",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain5",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Basic LLM Chain7",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser4": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain5",
+            "type": "ai_outputParser",
+            "index": 0
+          },
+          {
+            "node": "Basic LLM Chain7",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge9": {
+      "main": [
+        [
+          {
+            "node": "Code7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code7": {
+      "main": [
+        [
+          {
+            "node": "Supabase7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge6": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge12": {
+      "main": [
+        [
+          {
+            "node": "Add slug",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Merge12",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Supabase9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase10": {
+      "main": [
+        [
+          {
+            "node": "Code10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code10": {
+      "main": [
+        [
+          {
+            "node": "Merge13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge13": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser5": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge14": {
+      "main": [
+        [
+          {
+            "node": "Add category id to each lisiting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Image Uploader": {
+      "main": [
+        [
+          {
+            "node": "Merge16",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain6": {
+      "main": [
+        [
+          {
+            "node": "Merge18",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Mistral Small1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain6",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser7": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain6",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain8": {
+      "main": [
+        [
+          {
+            "node": "Merge18",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Mistral Small2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain8",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser8": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain8",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain10": {
+      "main": [
+        [
+          {
+            "node": "Merge18",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Mistral Small4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain10",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser10": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain10",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain12": {
+      "main": [
+        [
+          {
+            "node": "Merge18",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Mistral Small6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain12",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser12": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain12",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge18": {
+      "main": [
+        [
+          {
+            "node": "Structure data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Structure data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code13": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge20": {
+      "main": [
+        [
+          {
+            "node": "Code13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Supabase10",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge10": {
+      "main": [
+        [
+          {
+            "node": "Code8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code8": {
+      "main": [
+        [
+          {
+            "node": "Supabase8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain7": {
+      "main": [
+        [
+          {
+            "node": "Merge10",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Supabase11": {
+      "main": [
+        [
+          {
+            "node": "Code12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "Supabase12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge17": {
+      "main": [
+        [
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code12": {
+      "main": [
+        [
+          {
+            "node": "Merge17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge15": {
+      "main": [
+        [
+          {
+            "node": "Execute Image Uploader",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge16": {
+      "main": [
+        [
+          {
+            "node": "Supabase1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain3",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain3": {
+      "main": [
+        [
+          {
+            "node": "Code6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code6": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge20",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge15",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Merge12",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "bc33fda7-2ef8-4de8-8066-1011b06cbdee",
+  "meta": {
+    "instanceId": "fc3934fd523a92557b97fa83b25b3277d06024aace4fda172dc4bc8ac8d5e7a0"
+  },
+  "id": "P5m3EiH9MvlhKtDk",
+  "tags": []
+}
