@@ -1,0 +1,288 @@
+{
+  "name": "Image Uploader to Supabase",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        -240
+      ],
+      "id": "8fc5ea9e-1269-4599-95f3-8bd5eee26514",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.img_url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        -120
+      ],
+      "id": "ec659995-f5ed-4980-9431-bd1b79605438",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "/**\n * n8n Function Item code\n *\n * Reads a file from `binary.data`:\n * - Detects if it's PNG, JPEG, or SVG\n * - Extracts width & height\n * - Calculates file size (KB)\n * - Returns { width, height, sizeKB, isSquare }\n */\n\n// 1) Access binary data\nconst binData = $input.item.binary?.data;\nif (!binData) {\n  throw new Error('No binary data found in \"binary.data\".');\n}\n\n// 2) Convert to Buffer if needed\nlet buffer;\nif (Buffer.isBuffer(binData.data)) {\n  // Already a Buffer\n  buffer = binData.data;\n} else {\n  // Assume it's base64 string\n  buffer = Buffer.from(binData.data, 'base64');\n}\n\n// 3) Helper: parse PNG\nfunction parsePngDimensions(buf) {\n  if (\n    buf.length >= 24 &&\n    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47 &&\n    buf[4] === 0x0D && buf[5] === 0x0A && buf[6] === 0x1A && buf[7] === 0x0A\n  ) {\n    const width = buf.readUInt32BE(16);\n    const height = buf.readUInt32BE(20);\n    return { width, height };\n  }\n  return null;\n}\n\n// 4) Helper: parse JPEG\nfunction parseJpegDimensions(buf) {\n  if (buf.length < 4 || buf[0] !== 0xFF || buf[1] !== 0xD8) {\n    return null;\n  }\n  let offset = 2;\n  while (offset < buf.length) {\n    if (buf[offset] === 0xFF) {\n      const marker = buf[offset + 1];\n      // SOF markers: 0xC0, 0xC1, 0xC2, ...\n      if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {\n        const height = buf.readUInt16BE(offset + 5);\n        const width = buf.readUInt16BE(offset + 7);\n        return { width, height };\n      } else if (marker === 0xD9) {\n        // EOI\n        return null;\n      } else {\n        // skip\n        const segmentLength = buf.readUInt16BE(offset + 2);\n        offset += 2 + segmentLength;\n      }\n    } else {\n      offset++;\n    }\n  }\n  return null;\n}\n\n// 5) Helper: parse SVG\nfunction parseSvgDimensions(buf) {\n  const text = buf.toString('utf8');\n  if (!text.includes('<svg')) {\n    return null;\n  }\n  const svgTagMatch = text.match(/<svg\\b[^>]*>/i);\n  if (!svgTagMatch) {\n    return null;\n  }\n  const svgTag = svgTagMatch[0];\n\n  // Naive attribute parser\n  const attrs = {};\n  const attrRegex = /(\\S+)\\s*=\\s*(['\"])(.*?)\\2/g;\n  let match;\n  while ((match = attrRegex.exec(svgTag)) !== null) {\n    attrs[match[1].toLowerCase()] = match[3];\n  }\n\n  // Extract numeric portion from \"100px\" or \"100\"\n  function parseNumericAttribute(val) {\n    const numMatch = val.match(/(\\d+(\\.\\d+)?)/);\n    return numMatch ? parseFloat(numMatch[1]) : null;\n  }\n\n  let width = null;\n  let height = null;\n\n  if (attrs.width) width = parseNumericAttribute(attrs.width);\n  if (attrs.height) height = parseNumericAttribute(attrs.height);\n\n  // If width/height missing, try viewBox\n  if ((!width || !height) && attrs.viewbox) {\n    const parts = attrs.viewbox.split(/\\s+/).map((p) => parseFloat(p));\n    // Usually: \"0 0 w h\"\n    if (parts.length === 4) {\n      if (!width) width = parts[2];\n      if (!height) height = parts[3];\n    }\n  }\n\n  if (!width || !height) {\n    return null;\n  }\n  return { width, height };\n}\n\n// 6) Determine image type & parse dimensions\nlet dimensions = parsePngDimensions(buffer);\nif (!dimensions) dimensions = parseJpegDimensions(buffer);\nif (!dimensions) dimensions = parseSvgDimensions(buffer);\n\nif (!dimensions) {\n  throw new Error('Unsupported or unrecognized image format (not PNG/JPEG/SVG, or malformed data).');\n}\n\nconst { width, height } = dimensions;\nconst isSquare = (width === height);\n\n// 7) Calculate file size (in KB, rounded to 2 decimals if you like)\nconst sizeInBytes = buffer.length;\nconst sizeKB = Math.round((sizeInBytes / 1024) * 100) / 100; // e.g. 123.45\n\n// 8) Return results\nreturn {\n  json: {\n    width,\n    height,\n    sizeKB,\n    isSquare,\n  },\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        80
+      ],
+      "id": "7aef875d-662d-4d5f-8bc2-2344480244db",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        860,
+        -100
+      ],
+      "id": "c620f00c-2efc-4d7c-b593-12e913dca53e",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1528203e-9341-4545-8eab-73891c2b6e8c",
+              "leftValue": "={{ $json.isSquare }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "efa8f88b-39eb-4a7e-b121-ad6a5c1e536d",
+              "leftValue": "={{ $json.sizeKB }}",
+              "rightValue": 50,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1160,
+        -100
+      ],
+      "id": "94b48cbd-4146-41b4-ac01-f5c077c215dd",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "errorMessage": "Image is not squared or size is greater than 50kb"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        60
+      ],
+      "id": "5e2510be-97e7-4c43-9d19-c401f91e0ac0",
+      "name": "Stop and Error"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://yvgmusqljscajoqbuxdu.supabase.co/storage/v1/object/logos/agent_logos/{{ $json.slug }}.{{ $binary.data.fileExtension }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cache-Control ",
+              "value": "public"
+            },
+            {
+              "name": "max-age",
+              "value": "=2592000"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        -220
+      ],
+      "id": "70b4488e-e61f-446c-8356-4396f8eabbbd",
+      "name": "HTTP Request",
+      "credentials": {
+        "supabaseApi": {
+          "id": "cq9snVYPEoYpJmXa",
+          "name": "BestAIAgents - Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1380,
+        -200
+      ],
+      "id": "4911da63-26cb-4d0f-9634-01a93c57c613",
+      "name": "Merge1"
+    }
+  ],
+  "pinData": {
+    "Execute Workflow Trigger": [
+      {
+        "json": {
+          "img_url": "https://www.luminance.com/img/luminance-icon2.png",
+          "code": 1
+        }
+      }
+    ]
+  },
+  "connections": {
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3b79fee8-7350-4e71-8b8e-f747a946a752",
+  "meta": {
+    "instanceId": "fc3934fd523a92557b97fa83b25b3277d06024aace4fda172dc4bc8ac8d5e7a0"
+  },
+  "id": "zYaezgfJctS19y3F",
+  "tags": []
+}
