@@ -2,6 +2,8 @@
 
 This webhook server automatically processes campaign data files uploaded to a specified Google Drive folder, analyzes the data, and generates PowerPoint reports.
 
+[Link to YouTube Tutorial](https://www.youtube.com/watch?v=YgsVL-POOzM&t=1s)
+
 ## System Overview
 
 When a file named `campaign.csv` is uploaded to your configured Google Drive folder, the webhook server:

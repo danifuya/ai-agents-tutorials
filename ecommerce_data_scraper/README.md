@@ -1,5 +1,7 @@
 # E-commerce Data Scraper
 
+[Link to YouTube Tutorial](https://www.youtube.com/watch?v=fqYtcR4weGM&t=2s)
+
 This project is a Python-based web scraper designed to extract product information, specifically technical specifications and variants, from e-commerce websites. It uses `crawl4ai` to fetch website content and `pydantic-ai` with OpenAI's GPT models to intelligently extract structured data from the raw HTML.
 
 The scraper is built to be resilient, with capabilities to resume scraping from where it left off and handle errors gracefully by logging them without stopping the entire process.

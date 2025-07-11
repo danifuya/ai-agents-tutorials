@@ -1,7 +1,0 @@
-crawl4ai
-python-dotenv
-pydantic
-pydantic-ai
-typing-extensions
-pandas
-logfire

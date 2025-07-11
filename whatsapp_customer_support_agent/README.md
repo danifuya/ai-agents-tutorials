@@ -1,6 +1,7 @@
 # WhatsApp Customer Support Agent
 
 This repository contains a WhatsApp customer support agent built with FastAPI.
+[Link to YouTube Tutorial](https://www.youtube.com/watch?v=8h6oWnNgkGA&t=1836s)
 
 ## Table of Contents
 

@@ -2,6 +2,8 @@
 
 A Streamlit-based assistant for collecting home renovation requirements, exporting reports to Google Docs, and organizing images in Google Drive.
 
+[Link to YouTube Tutorial](https://www.youtube.com/watch?v=_AbpMlwNJ1M&t=269s)
+
 ---
 
 ## Features
