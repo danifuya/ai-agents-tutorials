@@ -16,13 +16,13 @@ Hi, I'm **Dani Fuyà**, **CEO of FlowHog**. I build AI systems that solve real-w
 
 ---
 
-## My Company: FlowHog
+## Flowhog
 
 <a href="https://flowhog.com/?utm_source=github&utm_medium=social&utm_campaign=ai-agent-tutorials&utm_content=ai-agent-tutorials" target="_blank">
-  <img src="https://placehold.co/200x100/1a202c/ffffff?text=FlowHog" alt="FlowHog Logo" width="200"/>
+  <img src="https://framerusercontent.com/images/RduGJev49gqs45PT6KwFei314E.png" alt="Flowhog Logo" width="200"/>
 </a>
 
-I am the founder and CEO of **FlowHog**, a company dedicated to providing agentic solutions for operations. We help businesses streamline their processes, automate repetitive tasks, and unlock new efficiencies with custom AI systems.
+I am the Co-founder and CEO of **Flowhog**, a company dedicated to providing agentic solutions for operations. We help businesses streamline their processes, automate repetitive tasks, and unlock new efficiencies with custom AI systems.
 
 - **Website:** [flowhog.com](https://flowhog.com/?utm_source=github&utm_medium=social&utm_campaign=ai-agent-tutorials&utm_content=ai-agent-tutorials)
 
