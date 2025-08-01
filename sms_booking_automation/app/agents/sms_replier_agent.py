@@ -120,9 +120,9 @@ def _format_job_details_for_prompt(job_details):
         formatted_details.append(
             f"Event Type (wedding, corporate, party, etc.): {job_details['event_type']}"
         )
-    if job_details.get("performer_count"):
+    if job_details.get("photographer_count"):
         formatted_details.append(
-            f"Number of Photographers Needed: {job_details['performer_count']}"
+            f"Number of Photographers Needed: {job_details['photographer_count']}"
         )
 
     # Address
@@ -257,7 +257,7 @@ async def send_services_info(ctx: RunContext[SMSReplierDeps]) -> str:
     try:
         # Define the paths to the 3 service images (relative to app directory)
         app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        image_paths = [os.path.join(app_dir, "assets", "services", "service1.jpeg")]
+        image_paths = [os.path.join(app_dir, "assets", "services.jpg")]
 
         # Check if all images exist (this check is now also done in JustCallService)
         missing_images = [path for path in image_paths if not os.path.exists(path)]

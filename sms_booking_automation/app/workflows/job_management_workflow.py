@@ -13,22 +13,23 @@ logger = logging.getLogger(__name__)
 async def _handle_services(conn: AsyncConnection, job_id: int, service_info: dict):
     """Handle services for the job."""
     service_codes = service_info.get("services", [])
-    
+
     # Convert service codes to service IDs
     service_ids = await ServiceMapper.get_service_ids_by_codes(conn, service_codes)
-    
+
     if not service_ids:
         logger.warning(f"No valid services found for job {job_id}")
         return
-    
+
     # Prepare service data (no individual service durations)
     service_data = []
     for service_id in service_ids:
-        service_data.append({
-            "service_id": service_id,
-            "duration_hours": None  # No individual service durations
-        })
-    
+        service_data.append(
+            {
+                "service_id": service_id,
+            }
+        )
+
     # Update job services using the enhanced repository method
     await JobServiceRepository.update_job_services(conn, job_id, service_data)
     logger.info(f"Updated services for job {job_id}: {len(service_data)} services")
@@ -82,15 +83,19 @@ async def confirm_job_for_applications(conn: AsyncConnection, job_id: int) -> bo
         # Generate job_code: DDMM + FirstName (e.g., 2201Matt)
         event_date = consolidated_job.get("event_date")
         client_first_name = consolidated_job.get("client_first_name", "")
-        
+
         if not event_date:
-            logger.error(f"Cannot confirm job {job_id}: missing event_date required for job_code generation")
+            logger.error(
+                f"Cannot confirm job {job_id}: missing event_date required for job_code generation"
+            )
             return False
-            
+
         if not client_first_name:
-            logger.error(f"Cannot confirm job {job_id}: missing client_first_name required for job_code generation")
+            logger.error(
+                f"Cannot confirm job {job_id}: missing client_first_name required for job_code generation"
+            )
             return False
-        
+
         # Parse event_date and extract day and month
         try:
             if isinstance(event_date, str):
@@ -106,22 +111,26 @@ async def confirm_job_for_applications(conn: AsyncConnection, job_id: int) -> bo
                 day = event_date.strftime("%d")
                 month = event_date.strftime("%m")
         except (ValueError, AttributeError, IndexError) as e:
-            logger.error(f"Cannot confirm job {job_id}: failed to parse event_date '{event_date}': {str(e)}")
+            logger.error(
+                f"Cannot confirm job {job_id}: failed to parse event_date '{event_date}': {str(e)}"
+            )
             return False
-        
+
         # Create job_code: DDMM + FirstName
         base_job_code = f"{day}{month}{client_first_name}"
-        
+
         # Check if job_code already exists in database
         existing_job = await JobRepository.get_by_code(conn, base_job_code)
         if existing_job and existing_job.get("job_id") != job_id:
             # If duplicate exists and it's not the same job, append client_id
             client_id = consolidated_job.get("client_id") or job.get("client_id")
             job_code = f"{base_job_code}{client_id}"
-            logger.info(f"Job code '{base_job_code}' already exists, using '{job_code}' instead")
+            logger.info(
+                f"Job code '{base_job_code}' already exists, using '{job_code}' instead"
+            )
         else:
             job_code = base_job_code
-        
+
         # Update job with the new job_code
         update_data = {"job_code": job_code}
         await JobRepository.update(conn, job_id, update_data)
@@ -254,7 +263,7 @@ async def manage_job_from_service_request(
         logger.info(f"Created new client with ID: {client_id}")
     elif client:
         logger.info(f"Found existing client with ID: {client_id}")
-        
+
         # Update client details if new information is provided by info collector
         client_update_data = {}
         if service_info.get("client_first_name"):
@@ -265,10 +274,12 @@ async def manage_job_from_service_request(
             client_update_data["email_address"] = service_info.get("client_email")
         if service_info.get("client_phone_number"):
             client_update_data["phone_number"] = service_info.get("client_phone_number")
-        
+
         if client_update_data:
             await ClientRepository.update(conn, client_id, client_update_data)
-            logger.info(f"Updated client {client_id} with new information: {list(client_update_data.keys())}")
+            logger.info(
+                f"Updated client {client_id} with new information: {list(client_update_data.keys())}"
+            )
 
     # === Step 4: Create or Update Job and determine reply ===
     update_data = {}
@@ -290,8 +301,8 @@ async def manage_job_from_service_request(
         update_data["guest_count"] = service_info.get("guest_count")
     if service_info.get("event_type"):
         update_data["event_type"] = service_info.get("event_type")
-    if service_info.get("performer_count"):
-        update_data["photographer_count"] = service_info.get("performer_count")
+    if service_info.get("photographer_count"):
+        update_data["photographer_count"] = service_info.get("photographer_count")
     if service_info.get("event_duration_hours"):
         update_data["event_duration_hours"] = service_info.get("event_duration_hours")
 
@@ -308,7 +319,7 @@ async def manage_job_from_service_request(
         )
         and service_info.get("guest_count")
         and service_info.get("event_type")
-        and service_info.get("performer_count")
+        and service_info.get("photographer_count")
         and service_info.get("services")
     ):
         logger.info(f"✅ Service request is complete.")
@@ -328,7 +339,9 @@ async def manage_job_from_service_request(
         if service_info.get("services"):
             try:
                 await _handle_services(conn, job_id, service_info)
-                logger.info(f"✅ Updated services for job {job_id}: {len(service_info['services'])} services")
+                logger.info(
+                    f"✅ Updated services for job {job_id}: {len(service_info['services'])} services"
+                )
             except Exception as e:
                 logger.error(f"Error updating services for job {job_id}: {str(e)}")
 
@@ -359,9 +372,13 @@ async def manage_job_from_service_request(
         if service_info.get("services"):
             try:
                 await _handle_services(conn, job_id_for_reply, service_info)
-                logger.info(f"✅ Updated services for pending job {job_id_for_reply}: {len(service_info['services'])} services")
+                logger.info(
+                    f"✅ Updated services for pending job {job_id_for_reply}: {len(service_info['services'])} services"
+                )
             except Exception as e:
-                logger.error(f"Error updating services for pending job {job_id_for_reply}: {str(e)}")
+                logger.error(
+                    f"Error updating services for pending job {job_id_for_reply}: {str(e)}"
+                )
 
         # In a real scenario, you'd call a shared "request_more_info" function.
         return {"job_status": "pending_client_info", "job_id": job_id_for_reply}

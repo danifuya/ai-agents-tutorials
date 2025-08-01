@@ -161,7 +161,7 @@ class JobRepository:
                 j.event_address_postcode,
                 j.guest_count,
                 j.event_type,
-                j.photographer_count AS performer_count,
+                j.photographer_count,
                 j.event_duration_hours,
                 COALESCE(ARRAY_AGG(s.name) FILTER (WHERE s.name IS NOT NULL), '{}') AS services
             FROM

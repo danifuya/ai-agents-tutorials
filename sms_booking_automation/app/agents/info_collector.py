@@ -4,6 +4,10 @@ from datetime import date, time, datetime
 from typing import Optional, List
 from enum import StrEnum
 
+import logfire
+
+logfire.configure()
+
 
 class EventType(StrEnum):
     WEDDING = "wedding"
@@ -77,7 +81,7 @@ class ServiceRequestInfo(BaseModel):
     event_type: Optional[EventType] = Field(
         description="Type of event (wedding, corporate, birthday_party, etc.)"
     )
-    performer_count: Optional[int] = Field(
+    photographer_count: Optional[int] = Field(
         ge=1,
         le=10,
         description="Number of photographers requested for the event",

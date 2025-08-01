@@ -88,9 +88,9 @@ class JustCallService:
             if attachments:
                 for attachment_path in attachments:
                     # Map local paths to public URLs
-                    if "service1.jpeg" in attachment_path:
+                    if "services.jpg" in attachment_path:
                         media_urls.append(
-                            "https://github.com/danifuya/ai-agents-tutorials/tree/main/sms_booking_automation/app/assets/services.jpg"
+                            "https://raw.githubusercontent.com/danifuya/ai-agents-tutorials/refs/heads/main/sms_booking_automation/app/assets/services.jpg"
                         )
                     else:
                         logger.warning(
