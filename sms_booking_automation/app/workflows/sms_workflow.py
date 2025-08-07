@@ -99,8 +99,10 @@ async def process_incoming_sms(
     missing_fields = []
     if job_id:
         consolidated_view = await JobRepository.get_consolidated_view(conn, job_id)
+        logger.debug(f"Consolidated view for job {job_id}: {consolidated_view}")
         if consolidated_view:
             job_status = consolidated_view.get("job_status")
+            logger.debug(f"Job status: {job_status}")
             if job_status == "pending_client_info":
                 # Map database columns to user-friendly names
                 field_map = {
@@ -115,14 +117,25 @@ async def process_incoming_sms(
                     "event_address_postcode": "Event Postcode",
                     "guest_count": "Number of Guests",
                     "event_type": "Event Type (e.g., wedding, corporate, birthday_party)",
-                    "performer_count": "Number of Photographers",
+                    "photographer_count": "Number of Photographers",
                     "services": "Services required",
                     "event_duration_hours": "Event Duration (hours)",
                 }
                 for key, friendly_name in field_map.items():
                     # Check if field is missing
-                    if not consolidated_view.get(key):
+                    value = consolidated_view.get(key)
+                    logger.debug(f"Checking field {key}: value={value}, type={type(value)}")
+                    
+                    # Field is missing if it's None or empty string (but allow 0, False, and empty arrays)
+                    is_missing = value is None or (isinstance(value, str) and value.strip() == "")
+                    
+                    if is_missing:
                         missing_fields.append(friendly_name)
+                        logger.debug(f"Field marked as missing: {key} = {value}")
+                    else:
+                        logger.debug(f"Field marked as present: {key} = {value}")
+                
+                logger.info(f"Missing fields for job {job_id}: {missing_fields}")
 
     # 7. Prepare context data for the agent (no prompt building)
     user_prompt = f"Full conversation history:\n{conversation_str}"
