@@ -38,7 +38,7 @@ class TelegramService:
             response = requests.post(url, json=payload)
             response.raise_for_status()
             result = response.json()
-            logger.info(f"Successfully called Telegram API method '{method}' for chat {payload.get('chat_id')}")
+            logger.info(f"Successfully called Telegram API method '{method}'")
             return result
         except requests.exceptions.HTTPError as e:
             logger.error(f"Telegram API HTTP error for method '{method}': {e.response.status_code} - {e.response.text}")
@@ -70,7 +70,7 @@ class TelegramService:
                     payload.update({"text": text})
                     self._send_request("sendMessage", payload)
             except Exception as e:
-                error_msg = f"Failed to send to chat {chat_id}: {str(e)}"
+                error_msg = f"Failed to send to chat: {str(e)}"
                 logger.error(error_msg)
                 errors.append(error_msg)
         
@@ -92,9 +92,9 @@ class TelegramService:
                 payload.update({"text": text})
                 result = self._send_request("sendMessage", payload)
             
-            logger.info(f"Successfully sent message to chat {chat_id}")
+            logger.info("Successfully sent message to chat")
             return result
             
         except Exception as e:
-            logger.error(f"Failed to send message to chat {chat_id}: {str(e)}")
+            logger.error(f"Failed to send message to chat: {str(e)}")
             raise  # Re-raise the original exception

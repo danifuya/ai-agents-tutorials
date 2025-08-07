@@ -11,11 +11,8 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 from api.routes import router
-from services.database_service import DatabaseService
-
 from services.redis_service import RedisService
 from services.celery_service import CeleryService
-from services.justcall_service import JustCallService
 
 API_HOST = os.getenv("API_HOST", "0.0.0.0")
 API_PORT = int(os.getenv("API_PORT", "8080"))
@@ -27,11 +24,6 @@ async def lifespan(app: FastAPI):
     """Manage application lifespan events with proper dependency injection."""
     logger.info(f"🚀 Application starting up in {ENVIRONMENT} environment...")
 
-    # 1. Initialize Core Services
-    db_service = DatabaseService()
-    await db_service.initialize()
-    app.state.db_service = db_service
-
     redis_service = RedisService()
     await redis_service.initialize()
     app.state.redis_service = redis_service
@@ -41,20 +33,11 @@ async def lifespan(app: FastAPI):
     await celery_service.initialize()
     app.state.celery_service = celery_service
 
-    # Initialize Twilio Service
-    justcall_service = JustCallService()
-    app.state.justcall_service = justcall_service
-    logger.info("✅ JustCall Service initialized.")
-
     logger.info("✅ Application startup complete.")
     yield
 
     # --- Shutdown ---
     logger.info("🛑 Application shutting down...")
-    if hasattr(app.state, "db_service") and app.state.db_service:
-        await app.state.db_service.close()
-        logger.info("Database pool closed.")
-
     if hasattr(app.state, "redis_service") and app.state.redis_service:
         await app.state.redis_service.close()
         logger.info("Redis connection closed.")
