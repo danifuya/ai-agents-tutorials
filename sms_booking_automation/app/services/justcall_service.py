@@ -218,7 +218,7 @@ class JustCallService:
             threads = result.get("data", [])
 
             if not threads:
-                logger.info(f"No threads found for {normalized_number}")
+                logger.info("No threads found for number")
                 return []
 
             # Get the first thread (should be the main conversation thread)

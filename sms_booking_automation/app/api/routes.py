@@ -41,7 +41,7 @@ async def sms_webhook(
             # Return 204 to prevent the provider from retrying
             return Response(status_code=204)
 
-        logger.info(f"Received SMS from {from_number}. Queuing for processing.")
+        logger.info("Received SMS. Queuing for processing.")
 
         # --- Delegate all logic to a Celery worker with debouncing ---
         await celery_service.queue_sms_processing_debounced(

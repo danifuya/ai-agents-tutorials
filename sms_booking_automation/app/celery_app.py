@@ -78,7 +78,7 @@ def process_incoming_sms_task(self, from_number: str, message_body: str):
                         message_body=message_body,
                     )
 
-            logger.info(f"✅ Celery task completed for SMS from: {from_number}")
+            logger.info("✅ Celery task completed for SMS")
             return {"status": "success", "from_number": from_number}
 
         except Exception as e:

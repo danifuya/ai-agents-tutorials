@@ -30,12 +30,6 @@ class SMSReplierDeps:
     missing_info: Optional[list[str]] = None
 
 
-class ServiceScenario(BaseModel):
-    scenario_type: Literal["information_provided", "about_services", "other"] = Field(
-        description="The scenario type of the conversation"
-    )
-
-
 # Define the email classification agent
 sms_replier_agent = Agent(
     # You'll need to specify an LLM here, e.g., 'openai:gpt-3.5-turbo'
@@ -172,9 +166,12 @@ def escalate_request(ctx: RunContext[SMSReplierDeps], escalation_message: str) -
 
     try:
         # Send Telegram notification
+        # Mask phone number for privacy (show first 3 digits, mask the rest)
+        masked_number = ctx.deps.phone_number[:3] + "*" * (len(ctx.deps.phone_number) - 3) if len(ctx.deps.phone_number) > 3 else "***"
+        
         ctx.deps.telegram_service.send_message(
             chat_id="1706006925",
-            text=f"🚨 Request escalated for client number: {ctx.deps.phone_number} \n\n Escalation message: {escalation_message}",
+            text=f"🚨 Request escalated for client {masked_number} \n\n Escalation message: {escalation_message}",
         )
 
         # Mark conversation as escalated in JustCall if service is available
@@ -184,28 +181,20 @@ def escalate_request(ctx: RunContext[SMSReplierDeps], escalation_message: str) -
                     ctx.deps.phone_number
                 )
                 if escalate_success:
-                    logger.info(
-                        f"Successfully marked conversation as escalated: {ctx.deps.phone_number}"
-                    )
+                    logger.info("Successfully marked conversation as escalated")
                 else:
-                    logger.warning(
-                        f"Failed to mark conversation as escalated: {ctx.deps.phone_number}"
-                    )
+                    logger.warning("Failed to mark conversation as escalated")
             except Exception as escalate_error:
-                logger.error(
-                    f"Error marking conversation as escalated for {ctx.deps.phone_number}: {str(escalate_error)}"
-                )
+                logger.error(f"Error marking conversation as escalated: {str(escalate_error)}")
         else:
             logger.warning(
                 "Cannot mark conversation as escalated: justcall_service is None (evaluation mode)"
             )
 
-        logger.info(f"Successfully escalated request for {ctx.deps.phone_number}")
+        logger.info("Successfully escalated request")
         return "Request escalated to a human agent."
     except Exception as e:
-        logger.error(
-            f"Failed to escalate request for {ctx.deps.phone_number}: {str(e)}"
-        )
+        logger.error(f"Failed to escalate request: {str(e)}")
         # Still return success message to avoid confusing the agent
         # The error is logged for debugging but we don't want the agent to know about technical failures
         return "Request escalated to a human agent."
@@ -272,18 +261,12 @@ async def send_services_info(ctx: RunContext[SMSReplierDeps]) -> str:
             attachments=image_paths,
         )
 
-        logger.info(
-            f"Successfully sent service infographics to {ctx.deps.phone_number}, message_id: {message_id}"
-        )
+        logger.info(f"Successfully sent service infographics, message_id: {message_id}")
         return "Services information sent."
 
     except JustCallServiceError as e:
-        logger.error(
-            f"JustCall service error sending infographics to {ctx.deps.phone_number}: {str(e)}"
-        )
+        logger.error(f"JustCall service error sending infographics: {str(e)}")
         return "Could not send services information"
     except Exception as e:
-        logger.error(
-            f"Unexpected error sending service infographics to {ctx.deps.phone_number}: {str(e)}"
-        )
+        logger.error(f"Unexpected error sending service infographics: {str(e)}")
         return "Could not send services information"

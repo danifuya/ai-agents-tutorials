@@ -26,7 +26,7 @@ def normalize_phone_number(phone_number: str) -> str:
     
     # If number is too short, return as-is
     if len(cleaned) < 8:
-        logger.warning(f"Phone number {phone_number} is too short")
+        logger.warning("Phone number is too short")
         return cleaned
     
     # Check if it already has a country code (starts with common country codes)

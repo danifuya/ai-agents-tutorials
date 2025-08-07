@@ -12,7 +12,7 @@ load_dotenv()
 
 # Configuration
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "http://localhost:8080/sms")
-FROM_NUMBER = ""
+FROM_NUMBER = "3453"
 MESSAGE = ""
 
 
