@@ -2,6 +2,8 @@
 
 This system provides automated SMS booking capabilities using AI agents, integrating with Just Call for SMS handling and Telegram for notifications.
 
+[Video tutorial](https://youtu.be/nlny25W3Oek)
+
 ## Prerequisites
 
 - Docker and Docker Compose
