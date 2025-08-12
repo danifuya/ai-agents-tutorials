@@ -1,6 +1,6 @@
 # AI Agents Tutorials
 
-Welcome to the AI Agents Tutorials repository! This is a collection of practical, real-world use-cases that have been implemented for clients at [**Flowhog**](https://flowhog.com/?utm_source=github&utm_medium=social&utm_campaign=ai-agent-tutorials&utm_content=ai-agent-tutorials).
+Welcome to the AI Agents Tutorials repository! This is a collection of practical, real-world use-cases that have been implemented in production.
 
 These tutorials are designed to help you learn how to build, deploy, and manage AI agents for a variety of tasks. Whether you're a beginner looking to get started or an experienced developer seeking to expand your skills, you'll find valuable resources here.
 
@@ -8,7 +8,7 @@ These tutorials are designed to help you learn how to build, deploy, and manage 
 
 ## About the Author
 
-Hi, I'm **Dani Fuyà**, **CEO of FlowHog**. I build AI systems that solve real-world problems for SMEs. I create content to share my knowledge and help others on their journey into the world of AI.
+Hi, I'm **Dani Fuyà**, **Co-Founder of Flowhog**. I build AI systems that solve real-world problems for SMEs. I create content to share my knowledge and help others on their journey into the world of AI.
 
 - 📺 **YouTube:** [youtube.com/@dani_fuya](https://www.youtube.com/@dani_fuya)
 - 💼 **LinkedIn:** [linkedin.com/in/daniel-fuya-espinar](https://www.linkedin.com/in/daniel-fuya-espinar/)
@@ -30,7 +30,7 @@ I am the Co-founder and CEO of **Flowhog**, a company dedicated to providing age
 
 ## Tutorials
 
-This repository contains a series of tutorials based on real AI agent implementations from FlowHog. Each tutorial includes source code and its own `README.md` file with detailed instructions on how to run the programs.
+This repository contains a series of tutorials based on real AI agent implementations from Flowhog. Each tutorial includes source code and its own `README.md` file with detailed instructions on how to run the programs.
 
 ---
 
