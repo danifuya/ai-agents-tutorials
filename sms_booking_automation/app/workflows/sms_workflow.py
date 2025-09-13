@@ -127,7 +127,11 @@ async def process_incoming_sms(
                     logger.debug(f"Checking field {key}: value={value}, type={type(value)}")
                     
                     # Field is missing if it's None or empty string (but allow 0, False, and empty arrays)
-                    is_missing = value is None or (isinstance(value, str) and value.strip() == "")
+                    # EXCEPTION: services field is missing if None, empty string, OR empty array
+                    if key == "services":
+                        is_missing = value is None or (isinstance(value, str) and value.strip() == "") or (isinstance(value, list) and len(value) == 0)
+                    else:
+                        is_missing = value is None or (isinstance(value, str) and value.strip() == "")
                     
                     if is_missing:
                         missing_fields.append(friendly_name)

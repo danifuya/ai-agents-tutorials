@@ -113,6 +113,22 @@ python -m app.main
 3. Booking confirmations and updates will be sent via SMS
 4. Notifications will also be sent to your configured Telegram chat
 
+### Interactive Terminal Demo
+
+For testing and demonstration purposes, you can run an interactive terminal demo that simulates the SMS workflow without requiring JustCall integration:
+
+```bash
+python demo_terminal.py
+```
+
+This demo allows you to:
+- Simulate incoming SMS messages from clients
+- See how the AI agents process booking requests
+- Test the complete booking workflow locally
+- View agent responses and conversation flow
+
+**Note:** The demo uses mock services for JustCall and Telegram. When the AI agent tries to use certain tools like `confirm_service_request`, `escalate_request`, or `send_service_info`, these will fail as they require additional services (Redis/Celery, Telegram API) that are not mocked in the demo. Further mocking would be required to simulate these advanced features fully.
+
 ## API Endpoints
 
 - `POST /webhook/sms` - Just Call SMS webhook endpoint
