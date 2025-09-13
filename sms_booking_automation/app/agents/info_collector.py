@@ -111,7 +111,8 @@ info_collector_agent = Agent(
     Today's date is {get_current_date()}
     Required information:
     - Reference id
-    - Client name
+    - Client first name
+    - Client last name
     - Client email
     - Client phone number
     - Date when service should take place
@@ -131,6 +132,26 @@ info_collector_agent = Agent(
     [user]: I'm looking for a photographer for my wedding on 2025-08-01 at 18:30
     [assistant]: Sure, what's your name?
     [user]: John Doe
+    
+    Example Output:
+    
+"service_id": null,
+"client_first_name": "John",
+"client_last_name": "Doe",
+"client_email": "null",
+"client_phone_number": null,
+"event_date": "2025-08-01",
+"start_time": "18:30",
+"event_address_street": null,
+"event_address_suburb": null,
+"event_address_state": null,
+"event_address_postcode": null,
+"guest_count": null,
+"event_type": "wedding",
+"photographer_count": null,
+"services": null,
+"event_duration_hours": null,
+
     """,
     output_type=ServiceRequestInfo,
     instrument=True,

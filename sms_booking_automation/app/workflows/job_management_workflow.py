@@ -306,79 +306,66 @@ async def manage_job_from_service_request(
     if service_info.get("event_duration_hours"):
         update_data["event_duration_hours"] = service_info.get("event_duration_hours")
 
-    # Check if all required fields are present instead of relying on AI
-    if (
-        service_info.get("client_first_name")
-        and service_info.get("client_last_name")
-        and service_info.get("client_email")
-        and service_info.get("event_date")
-        and service_info.get("start_time")
-        and (
-            service_info.get("event_address_suburb")
-            or service_info.get("event_address_state")
-        )
-        and service_info.get("guest_count")
-        and service_info.get("event_type")
-        and service_info.get("photographer_count")
-        and service_info.get("services")
-    ):
-        logger.info(f"✅ Service request is complete.")
-        update_data["job_status"] = "ready_to_post"
-        if job_to_update:
-            job_id = job_to_update["job_id"]
+    # === STAGE 1: First update the database with the new service info ===
+    # Always save the incoming data first, regardless of completeness
+    job_id = None
+    if job_to_update:
+        job_id = job_to_update["job_id"]
+        if update_data:
             await JobRepository.update(conn, job_id, update_data)
-            logger.info(f"✅ Updated job {job_id} to 'ready_to_post'.")
+            logger.info(f"✅ Updated existing job {job_id} with new service info.")
         else:
-            job_code = f"{datetime.now().strftime('%Y%m%d%H%M%S')}"
-            update_data["job_code"] = job_code
-            update_data["client_id"] = client_id
-            job_id = await JobRepository.create(conn, update_data)
-            logger.info(f"✅ Created new job {job_id} with status 'ready_to_post'.")
-
-        # Handle services - convert service codes to service IDs and persist to job_services table with durations
-        if service_info.get("services"):
-            try:
-                await _handle_services(conn, job_id, service_info)
-                logger.info(
-                    f"✅ Updated services for job {job_id}: {len(service_info['services'])} services"
-                )
-            except Exception as e:
-                logger.error(f"Error updating services for job {job_id}: {str(e)}")
-
-        # In a real scenario, you'd call a shared "send_confirmation" function here
-        # that could handle email or SMS. For now, we return the state.
-        return {"job_status": "ready_to_post", "job_id": job_id}
-
+            logger.info(f"✅ Using existing job {job_id} (no new job fields to update).")
     else:
-        logger.info("ℹ️ Service request is not complete.")
-        update_data["job_status"] = "pending_client_info"
-        job_id_for_reply = None
-        if job_to_update:
-            job_id_for_reply = job_to_update["job_id"]
-            await JobRepository.update(conn, job_id_for_reply, update_data)
-            logger.info(
-                f"✅ Updated pending job {job_id_for_reply} with new partial info."
-            )
-        else:
-            job_code = f"{datetime.now().strftime('%Y%m%d%H%M')}"
-            update_data["job_code"] = job_code
-            update_data["client_id"] = client_id
-            job_id_for_reply = await JobRepository.create(conn, update_data)
-            logger.info(
-                f"✅ Created new job {job_id_for_reply} with status 'pending_client_info'."
-            )
+        job_code = f"{datetime.now().strftime('%Y%m%d%H%M')}"
+        update_data["job_code"] = job_code
+        update_data["client_id"] = client_id
+        job_id = await JobRepository.create(conn, update_data)
+        logger.info(f"✅ Created new job {job_id} with service info.")
 
-        # Handle services even for pending jobs - store partial service information
-        if service_info.get("services"):
-            try:
-                await _handle_services(conn, job_id_for_reply, service_info)
-                logger.info(
-                    f"✅ Updated services for pending job {job_id_for_reply}: {len(service_info['services'])} services"
-                )
-            except Exception as e:
-                logger.error(
-                    f"Error updating services for pending job {job_id_for_reply}: {str(e)}"
-                )
+    # Handle services - convert service codes to service IDs and persist to job_services table
+    if service_info.get("services"):
+        try:
+            await _handle_services(conn, job_id, service_info)
+            logger.info(
+                f"✅ Updated services for job {job_id}: {len(service_info['services'])} services"
+            )
+        except Exception as e:
+            logger.error(f"Error updating services for job {job_id}: {str(e)}")
 
-        # In a real scenario, you'd call a shared "request_more_info" function.
-        return {"job_status": "pending_client_info", "job_id": job_id_for_reply}
+    # === STAGE 2: Get consolidated view and determine final job status ===
+    # Now check the COMBINED data (service_info + existing_db_data) for completeness
+    consolidated_view = await JobRepository.get_consolidated_view(conn, job_id)
+    if not consolidated_view:
+        logger.error(f"Could not get consolidated view for job {job_id}")
+        return {"job_status": "pending_client_info", "job_id": job_id}
+
+    # Check if ALL required fields are present in the COMBINED data
+    all_fields_present = (
+        consolidated_view.get("client_first_name")
+        and consolidated_view.get("client_last_name")
+        and consolidated_view.get("client_email")
+        and consolidated_view.get("event_date")
+        and consolidated_view.get("start_time")
+        and consolidated_view.get("event_address_street")
+        and consolidated_view.get("event_address_suburb")
+        and consolidated_view.get("event_address_state")
+        and consolidated_view.get("event_address_postcode")
+        and consolidated_view.get("guest_count")
+        and consolidated_view.get("event_type")
+        and consolidated_view.get("photographer_count")
+        and consolidated_view.get("services")
+        and len(consolidated_view.get("services", [])) > 0  # Has services
+        and consolidated_view.get("event_duration_hours")
+    )
+
+    if all_fields_present:
+        # Update job status to ready_to_post
+        await JobRepository.update(conn, job_id, {"job_status": "ready_to_post"})
+        logger.info(f"✅ Job {job_id} is complete and ready to post!")
+        return {"job_status": "ready_to_post", "job_id": job_id}
+    else:
+        # Update job status to pending_client_info
+        await JobRepository.update(conn, job_id, {"job_status": "pending_client_info"})
+        logger.info(f"ℹ️ Job {job_id} is still missing required information.")
+        return {"job_status": "pending_client_info", "job_id": job_id}
