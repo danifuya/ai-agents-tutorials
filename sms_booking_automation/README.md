@@ -122,12 +122,14 @@ python demo_terminal.py
 ```
 
 This demo allows you to:
+
 - Simulate incoming SMS messages from clients
 - See how the AI agents process booking requests
 - Test the complete booking workflow locally
 - View agent responses and conversation flow
+- **Receive real Telegram notifications** (if configured)
 
-**Note:** The demo uses mock services for JustCall and Telegram. When the AI agent tries to use certain tools like `confirm_service_request`, `escalate_request`, or `send_service_info`, these will fail as they require additional services (Redis/Celery, Telegram API) that are not mocked in the demo. Further mocking would be required to simulate these advanced features fully.
+**Note:** The demo uses a mock JustCall service for SMS but uses the **real Telegram service**. If you have `TELEGRAM_BOT_TOKEN` and `TELEGRAM_TARGET_CHAT_IDS` configured in your `.env`, you'll receive actual Telegram notifications during the demo.
 
 ## API Endpoints
 

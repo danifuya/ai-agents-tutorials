@@ -66,12 +66,6 @@ class ServiceRequestInfo(BaseModel):
     event_address_street: Optional[str] = Field(
         description="Street address of the event place including number and street name"
     )
-    event_address_suburb: Optional[str] = Field(
-        description="Suburb or city name of the event place"
-    )
-    event_address_state: Optional[str] = Field(
-        description="State or territory abbreviation of the event place"
-    )
     event_address_postcode: Optional[str] = Field(
         description="Postal code of the event place"
     )
@@ -96,9 +90,9 @@ class ServiceRequestInfo(BaseModel):
 
 # Get current date
 def get_current_date() -> str:
-    """Get current date formatted as YYYY-MM-DD"""
+    """Get current date formatted as YYYY-MM-DD (Day of week)"""
     current_date = datetime.now().date()
-    return current_date.strftime("%Y-%m-%d")
+    return current_date.strftime("%Y-%m-%d (%A)")
 
 
 # Define the email classification agent
@@ -117,7 +111,7 @@ info_collector_agent = Agent(
     - Client phone number
     - Date when service should take place
     - Starting time of the event
-    - Address of the event (street, suburb, state, postcode)
+    - Address of the event (street and postcode)
     - Photography services required
     - Number of guests
     - Event type (wedding, corporate, birthday_party, graduation, anniversary, family_reunion, or other)
@@ -143,8 +137,6 @@ info_collector_agent = Agent(
 "event_date": "2025-08-01",
 "start_time": "18:30",
 "event_address_street": null,
-"event_address_suburb": null,
-"event_address_state": null,
 "event_address_postcode": null,
 "guest_count": null,
 "event_type": "wedding",

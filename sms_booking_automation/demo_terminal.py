@@ -21,8 +21,11 @@ load_dotenv()
 
 # Override database host for local demo
 os.environ["POSTGRES_HOST"] = "localhost"
+os.environ["REDIS_HOST"] = "localhost"
+
 
 from services.database_service import DatabaseService
+from services.telegram_service import TelegramService
 from workflows.sms_workflow import process_incoming_sms
 from utils.utils import normalize_phone_number
 
@@ -66,20 +69,13 @@ class MockJustCallService:
         return []
 
 
-class MockTelegramService:
-    """Mock Telegram service - silent for cleaner demo"""
-
-    async def send_notification(self, message: str) -> bool:
-        return True
-
-
 class TerminalDemo:
     """Main demo class"""
 
     def __init__(self):
         self.db_service = DatabaseService()
         self.justcall_service = MockJustCallService()
-        self.telegram_service = MockTelegramService()
+        self.telegram_service = TelegramService()
         self.demo_phone = "+1234567890"  # Fixed demo phone number
 
     async def initialize(self):
@@ -99,12 +95,11 @@ class TerminalDemo:
 
         # Add the current user message to history BEFORE processing
         # This ensures it's available for the next conversation
-        self.justcall_service.conversation_history[normalized_phone].append({
-            "role": "user",
-            "content": message
-        })
+        self.justcall_service.conversation_history[normalized_phone].append(
+            {"role": "user", "content": message}
+        )
 
-        # Process through the original workflow 
+        # Process through the original workflow
         # (it will get history, add current message temporarily, then process)
         async with self.db_service.get_connection() as conn:
             await process_incoming_sms(
@@ -114,7 +109,7 @@ class TerminalDemo:
                 from_number=self.demo_phone,
                 message_body=message,
             )
-        
+
         # The assistant's reply gets saved automatically in MockJustCallService.send_sms()
 
     async def run(self):

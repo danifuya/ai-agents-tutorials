@@ -24,6 +24,7 @@ class SMSReplierDeps:
     justcall_service: JustCallService
     connection: Any
     phone_number: str
+    telegram_chat_ids: list[str]
     job_id: Optional[int] = None
     job_status: Optional[str] = None
     job_details: Optional[dict] = None
@@ -52,7 +53,7 @@ sms_replier_agent = Agent(
     If tool confirm_service_request fails, escalate to a human agent and tell the client that you will get back to them shortly.
     
     When you tell the client that you have escalated the request to a human agent, you MUST use the escalate_request tool.
-    Keep your responses concise and avoid using markdown formatting like asterisks. When asking for multiple pieces of information, always present them as a list. For addresses, use the format: Street, Suburb, State, Postcode.
+    Keep your responses concise and avoid using markdown formatting like asterisks. When asking for multiple pieces of information, always present them as a list. For addresses, use the format: Street, Postcode.
 
 """,
     instrument=True,
@@ -123,10 +124,6 @@ def _format_job_details_for_prompt(job_details):
     address_parts = []
     if job_details.get("event_address_street"):
         address_parts.append(job_details["event_address_street"])
-    if job_details.get("event_address_suburb"):
-        address_parts.append(job_details["event_address_suburb"])
-    if job_details.get("event_address_state"):
-        address_parts.append(job_details["event_address_state"])
     if job_details.get("event_address_postcode"):
         address_parts.append(job_details["event_address_postcode"])
     if address_parts:
@@ -167,12 +164,20 @@ def escalate_request(ctx: RunContext[SMSReplierDeps], escalation_message: str) -
     try:
         # Send Telegram notification
         # Mask phone number for privacy (show first 3 digits, mask the rest)
-        masked_number = ctx.deps.phone_number[:3] + "*" * (len(ctx.deps.phone_number) - 3) if len(ctx.deps.phone_number) > 3 else "***"
-        
-        ctx.deps.telegram_service.send_message(
-            chat_id="1706006925",
-            text=f"🚨 Request escalated for client {masked_number} \n\n Escalation message: {escalation_message}",
+        masked_number = (
+            ctx.deps.phone_number[:3] + "X" * (len(ctx.deps.phone_number) - 3)
+            if len(ctx.deps.phone_number) > 3
+            else "XXX"
         )
+
+        # Send escalation message to all configured chat IDs
+        escalation_text = f"🚨 Request escalated for client {masked_number}\n\nEscalation message: {escalation_message}"
+
+        for chat_id in ctx.deps.telegram_chat_ids:
+            ctx.deps.telegram_service.send_message(
+                chat_id=chat_id,
+                text=escalation_text,
+            )
 
         # Mark conversation as escalated in JustCall if service is available
         if ctx.deps.justcall_service is not None:
@@ -185,7 +190,9 @@ def escalate_request(ctx: RunContext[SMSReplierDeps], escalation_message: str) -
                 else:
                     logger.warning("Failed to mark conversation as escalated")
             except Exception as escalate_error:
-                logger.error(f"Error marking conversation as escalated: {str(escalate_error)}")
+                logger.error(
+                    f"Error marking conversation as escalated: {str(escalate_error)}"
+                )
         else:
             logger.warning(
                 "Cannot mark conversation as escalated: justcall_service is None (evaluation mode)"
