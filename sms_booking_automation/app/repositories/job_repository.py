@@ -156,8 +156,6 @@ class JobRepository:
                 j.event_date,
                 j.event_start_time AS start_time,
                 j.event_address_street,
-                j.event_address_suburb,
-                j.event_address_state,
                 j.event_address_postcode,
                 j.guest_count,
                 j.event_type,

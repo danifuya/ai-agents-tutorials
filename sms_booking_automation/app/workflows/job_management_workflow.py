@@ -289,10 +289,6 @@ async def manage_job_from_service_request(
         update_data["event_start_time"] = service_info.get("start_time")
     if service_info.get("event_address_street"):
         update_data["event_address_street"] = service_info.get("event_address_street")
-    if service_info.get("event_address_suburb"):
-        update_data["event_address_suburb"] = service_info.get("event_address_suburb")
-    if service_info.get("event_address_state"):
-        update_data["event_address_state"] = service_info.get("event_address_state")
     if service_info.get("event_address_postcode"):
         update_data["event_address_postcode"] = service_info.get(
             "event_address_postcode"
@@ -348,8 +344,6 @@ async def manage_job_from_service_request(
         and consolidated_view.get("event_date")
         and consolidated_view.get("start_time")
         and consolidated_view.get("event_address_street")
-        and consolidated_view.get("event_address_suburb")
-        and consolidated_view.get("event_address_state")
         and consolidated_view.get("event_address_postcode")
         and consolidated_view.get("guest_count")
         and consolidated_view.get("event_type")

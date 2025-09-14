@@ -196,7 +196,7 @@ def publish_job_task(self, job_id: int):
 
                     message = (
                         f"🗓️ {formatted_date}\n"
-                        f"📍 {job.get('event_address_suburb', 'N/A').capitalize()}\n"
+                        f"📍 {job.get('event_address_street', 'N/A')}\n"
                         f"⏰ {formatted_time}\n"
                         f"{duration_str}"
                         f"📸 {photographer_label}\n\n"

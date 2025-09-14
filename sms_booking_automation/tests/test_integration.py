@@ -62,16 +62,16 @@ class TestJobRepositoryIntegration:
         # Insert test job
         job_query = """
             INSERT INTO jobs (client_id, event_date, event_start_time, event_address_street,
-                            event_address_suburb, event_address_state, event_address_postcode,
+                            event_address_postcode,
                             guest_count, event_type, photographer_count, event_duration_hours, job_status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING job_id
         """
         job_result = await DatabaseService.fetch_one(
             db_transaction,
             job_query,
             (client_id, "2024-12-15", "15:00:00", "789 Integration St",
-             "TestSuburb", "NSW", "2020", 100, "wedding", 3, 10, "pending_client_info")
+             "2020", 100, "wedding", 3, 10, "pending_client_info")
         )
         job_id = job_result["job_id"]
         
@@ -109,8 +109,6 @@ class TestJobRepositoryIntegration:
         # Verify job data is properly returned
         assert result["job_status"] == "pending_client_info"
         assert result["event_address_street"] == "789 Integration St"
-        assert result["event_address_suburb"] == "TestSuburb"
-        assert result["event_address_state"] == "NSW"
         assert result["guest_count"] == 100
         
         # Verify services are properly aggregated

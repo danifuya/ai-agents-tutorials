@@ -30,8 +30,6 @@ def sample_consolidated_view_with_services():
         "event_date": "2024-06-15",
         "start_time": "14:00:00",
         "event_address_street": "123 Main St",
-        "event_address_suburb": "Downtown",
-        "event_address_state": "NSW",
         "event_address_postcode": "2000",
         "guest_count": 50,
         "event_type": "wedding",
