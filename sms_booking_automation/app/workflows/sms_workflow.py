@@ -47,13 +47,6 @@ async def process_incoming_sms(
             normalized_from_number, limit=5, last_minutes=15
         )
 
-    full_conversation += [
-        {
-            "role": "user",
-            "content": message_body,
-        }
-    ]
-
     # We create a string representation for the agent
     conversation_str = "\n".join(
         f"[{turn['role']}]: {turn['content']}" for turn in full_conversation
