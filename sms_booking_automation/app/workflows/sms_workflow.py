@@ -44,7 +44,7 @@ async def process_incoming_sms(
         )
     else:
         full_conversation = justcall_service.get_conversation_history(
-            normalized_from_number, limit=15
+            normalized_from_number, limit=5, last_minutes=15
         )
 
     full_conversation += [
@@ -122,21 +122,29 @@ async def process_incoming_sms(
                 for key, friendly_name in field_map.items():
                     # Check if field is missing
                     value = consolidated_view.get(key)
-                    logger.debug(f"Checking field {key}: value={value}, type={type(value)}")
-                    
+                    logger.debug(
+                        f"Checking field {key}: value={value}, type={type(value)}"
+                    )
+
                     # Field is missing if it's None or empty string (but allow 0, False, and empty arrays)
                     # EXCEPTION: services field is missing if None, empty string, OR empty array
                     if key == "services":
-                        is_missing = value is None or (isinstance(value, str) and value.strip() == "") or (isinstance(value, list) and len(value) == 0)
+                        is_missing = (
+                            value is None
+                            or (isinstance(value, str) and value.strip() == "")
+                            or (isinstance(value, list) and len(value) == 0)
+                        )
                     else:
-                        is_missing = value is None or (isinstance(value, str) and value.strip() == "")
-                    
+                        is_missing = value is None or (
+                            isinstance(value, str) and value.strip() == ""
+                        )
+
                     if is_missing:
                         missing_fields.append(friendly_name)
                         logger.debug(f"Field marked as missing: {key} = {value}")
                     else:
                         logger.debug(f"Field marked as present: {key} = {value}")
-                
+
                 logger.info(f"Missing fields for job {job_id}: {missing_fields}")
 
     # 7. Prepare context data for the agent (no prompt building)

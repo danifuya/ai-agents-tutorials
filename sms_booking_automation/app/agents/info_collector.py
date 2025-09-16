@@ -90,9 +90,9 @@ class ServiceRequestInfo(BaseModel):
 
 # Get current date
 def get_current_date() -> str:
-    """Get current date formatted as YYYY-MM-DD (Day of week)"""
+    """Get current date formatted as YYYY-MM-DD"""
     current_date = datetime.now().date()
-    return current_date.strftime("%Y-%m-%d (%A)")
+    return current_date.strftime("%Y-%m-%d")
 
 
 # Define the email classification agent
