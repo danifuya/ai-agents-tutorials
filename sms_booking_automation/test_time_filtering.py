@@ -57,7 +57,7 @@ async def test_time_filtering():
         # Test 3: Get all recent messages (no time filter)
         print("\n📅 Test 3: Fetching recent messages (no time filter)...")
         messages_all = justcall.get_conversation_history(
-            participant_number=test_phone_number, limit=50
+            participant_number=test_phone_number
         )
         print(f"✅ Found {len(messages_all)} recent messages (no filter)")
 

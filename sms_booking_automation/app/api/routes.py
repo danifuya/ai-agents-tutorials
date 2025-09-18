@@ -47,7 +47,7 @@ async def sms_webhook(
         await celery_service.queue_sms_processing_debounced(
             from_number=from_number,
             message_body=message_body,
-            delay_seconds=0,
+            delay_seconds=22,
         )
         # --------------------------------------------------------------------------
 
