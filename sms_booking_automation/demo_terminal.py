@@ -58,7 +58,10 @@ class MockJustCallService:
         return "demo_msg_id"
 
     def get_conversation_history(
-        self, participant_number: str, limit: int = 10
+        self,
+        participant_number: str,
+        limit: int = 10,
+        last_minutes: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         normalized_number = normalize_phone_number(participant_number)
         history = self.conversation_history.get(normalized_number, [])

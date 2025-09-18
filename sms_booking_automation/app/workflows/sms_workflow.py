@@ -44,7 +44,7 @@ async def process_incoming_sms(
         )
     else:
         full_conversation = justcall_service.get_conversation_history(
-            normalized_from_number, limit=5, last_minutes=15
+            normalized_from_number, limit=5, last_minutes=30
         )
 
     # We create a string representation for the agent
