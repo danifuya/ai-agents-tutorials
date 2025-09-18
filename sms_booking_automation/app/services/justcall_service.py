@@ -1,7 +1,7 @@
 import os
 import httpx
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from utils.utils import normalize_phone_number
 
@@ -136,10 +136,15 @@ class JustCallService:
             raise JustCallServiceError(f"MMS send failed: {str(e)}")
 
     def get_conversation_history(
-        self, participant_number: str, limit: int = 10
+        self, participant_number: str, limit: int = 10, last_minutes: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         Retrieves the last 'limit' messages to and from a specific number.
+
+        Args:
+            participant_number: Phone number to get history for
+            limit: Maximum number of messages to return
+            last_minutes: If specified, only return messages from the last X minutes
         """
         normalized_number = normalize_phone_number(participant_number)
         url = f"{self.API_BASE_URL}/texts"
@@ -149,6 +154,15 @@ class JustCallService:
             "page": 0,
             "per_page": limit * 2,
         }
+
+        # Add time filtering if specified
+        if last_minutes is not None:
+            # Calculate UTC+2 (CEST) time X minutes ago
+            from datetime import timezone
+            now_utc = datetime.now(timezone.utc)
+            now_cest = now_utc + timedelta(hours=2)  # Convert UTC to CEST
+            from_time = now_cest - timedelta(minutes=last_minutes)
+            params["from_datetime"] = from_time.strftime("%Y-%m-%d %H:%M:%S")
 
         try:
             with httpx.Client() as client:
