@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.117.1",
     "msgraph-sdk>=1.45.0",
+    "pydantic-settings>=2.11.0",
     "python-dotenv>=1.1.1",
     "uvicorn[standard]>=0.37.0",
 ]
