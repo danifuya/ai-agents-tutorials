@@ -5,8 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "docling>=2.54.0",
     "fastapi>=0.117.1",
     "msgraph-sdk>=1.45.0",
+    "openai>=1.109.1",
     "pydantic-settings>=2.11.0",
     "python-dotenv>=1.1.1",
     "uvicorn[standard]>=0.37.0",

@@ -5,13 +5,17 @@ from typing import Dict, Any, Optional
 from fastapi import Request
 from fastapi.responses import Response
 from .graph_service import GraphService
+from .document_service import DocumentService
+from .agent_service import AgentService
 
 
 class WebhookService:
     """Service class to handle webhook notifications from Microsoft Graph"""
 
-    def __init__(self, graph_service: GraphService, category_name: str):
+    def __init__(self, graph_service: GraphService, document_service: DocumentService, agent_service: AgentService, category_name: str):
         self.graph_service = graph_service
+        self.document_service = document_service
+        self.agent_service = agent_service
         self.category_name = category_name
 
     async def handle_validation(self, validation_token: str) -> Response:
@@ -370,6 +374,9 @@ class WebhookService:
                         print(
                             f"     📄 Valid PDF detected - ready for invoice processing!"
                         )
+
+                        # Scan document with docling and extract invoice data
+                        await self._process_document_intelligence(file_path, filename)
                     else:
                         print(f"     ⚠️ WARNING: File doesn't appear to be a valid PDF")
                         print(f"     🔍 File starts with: {file_content[:10]}")
@@ -382,6 +389,38 @@ class WebhookService:
 
             print(f"     🔍 Full error: {traceback.format_exc()}")
             return False
+
+    async def _process_document_intelligence(self, file_path: str, filename: str):
+        """
+        Process document with docling and AI extraction, then rename if needed
+        """
+        try:
+            # Step 1: Scan document with docling
+            markdown_content = await self.document_service.scan_document(file_path, filename)
+
+            if markdown_content:
+                # Step 2: Extract invoice data with AI
+                invoice_data = await self.agent_service.extract_invoice_data(markdown_content)
+
+                # Step 3: Rename file if both date and number are found
+                if invoice_data.invoice_date and invoice_data.invoice_number:
+                    # Format date as YYYY-MM-DD string for filename
+                    date_str = invoice_data.invoice_date.strftime("%Y-%m-%d")
+                    new_filename = f"{date_str}_{invoice_data.invoice_number}.pdf"
+                    new_file_path = os.path.join(os.path.dirname(file_path), new_filename)
+
+                    print(f"     📝 Renaming file to: {new_filename}")
+                    os.rename(file_path, new_file_path)
+                    print(f"     ✅ File renamed successfully")
+                else:
+                    print(f"     📄 Keeping original filename: {filename}")
+                    if not invoice_data.invoice_date:
+                        print(f"     ❓ Missing invoice date")
+                    if not invoice_data.invoice_number:
+                        print(f"     ❓ Missing invoice number")
+
+        except Exception as e:
+            print(f"     ❌ Error processing document intelligence: {e}")
 
     async def _assign_category(self, user_id: str, message_id: str):
         """

@@ -6,6 +6,8 @@ from config import settings
 from services.graph_service import GraphService
 from services.subscription_service import SubscriptionService
 from services.webhook_service import WebhookService
+from services.document_service import DocumentService
+from services.agent_service import AgentService
 
 app = FastAPI(title="Outlook Invoice Classifier", version="0.1.0")
 
@@ -22,8 +24,14 @@ subscription_service = SubscriptionService(
     user_id=settings.user_id
 )
 
+document_service = DocumentService()
+
+agent_service = AgentService(openai_api_key=settings.openai_api_key)
+
 webhook_service = WebhookService(
     graph_service=graph_service,
+    document_service=document_service,
+    agent_service=agent_service,
     category_name=settings.category_name
 )
 

@@ -21,6 +21,9 @@ class AppSettings(BaseSettings):
     # Email Processing Configuration
     category_name: str = "Factura Guardada"
 
+    # AI Configuration
+    openai_api_key: str
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
