@@ -26,7 +26,7 @@ subscription_service = SubscriptionService(
 
 document_service = DocumentService()
 
-agent_service = AgentService(openai_api_key=settings.openai_api_key)
+agent_service = AgentService(openai_api_key=settings.openai_api_key, local_api_url=settings.local_api_url)
 
 webhook_service = WebhookService(
     graph_service=graph_service,

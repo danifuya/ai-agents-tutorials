@@ -253,8 +253,8 @@ class WebhookService:
             attachments = attachments_response.value
             print(f"📎 Found {len(attachments)} attachment(s):")
 
-            # Create folder based on contact information
-            safe_folder_name = re.sub(r"[^\w\-_\.]", "_", folder_name)[:50]
+            # Create folder based on contact information - preserve spaces for significant partner names
+            safe_folder_name = re.sub(r"[^\w\-_\.\s]", "_", folder_name)[:50]
             attachments_dir = os.path.join("attachments", safe_folder_name)
             os.makedirs(attachments_dir, exist_ok=True)
             print(f"📁 Storing in folder: {attachments_dir}")

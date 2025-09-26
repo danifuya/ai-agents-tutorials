@@ -22,7 +22,8 @@ class AppSettings(BaseSettings):
     category_name: str = "Factura Guardada"
 
     # AI Configuration
-    openai_api_key: str
+    openai_api_key: str = "dummy"
+    local_api_url: str = "http://localhost:12434/engines/v1"
 
     class Config:
         env_file = ".env"
