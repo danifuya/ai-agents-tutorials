@@ -19,7 +19,7 @@ class AppSettings(BaseSettings):
     reload: bool = True
 
     # Email Processing Configuration
-    category_name: str = "Factura Guardada"
+    category_name: str = "Invoice Saved"
 
     # AI Configuration
     openai_api_key: str = "dummy"

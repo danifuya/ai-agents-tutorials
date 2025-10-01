@@ -2,6 +2,8 @@
 
 An AI-powered application that automatically classifies invoices in Outlook emails using Microsoft Graph API and local AI models.
 
+[Video Tutorial](https://youtu.be/zwGzqiA0BWI)
+
 ## Requirements
 
 - **Docker Desktop** with AI capabilities (Docker Model Runner)
@@ -33,7 +35,9 @@ Make sure to grant admin consent for all application permissions.
 Start ngrok to create a public URL for webhook notifications:
 
 ```bash
-ngrok http --domain=your-ngrok-domain 8000
+brew install ngrok
+ngrok config add-authtoken XXXX
+ngrok http --domain=mustang-delicate-redbird.ngrok-free.app 8000
 ```
 
 ### 2. Set up environment variables
@@ -51,7 +55,7 @@ USER_ID=your_user_id
 WEBHOOK_URL=https://mustang-delicate-redbird.ngrok-free.app/webhook/outlook
 
 # Email Processing Configuration
-CATEGORY_NAME=Factura Guardada
+CATEGORY_NAME=Invoice Saved
 
 # AI Configuration (for local Docker Model Runner)
 OPENAI_API_KEY=dummy
