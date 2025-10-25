@@ -1,0 +1,27 @@
+FROM pgvector/pgvector:pg17
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    lsb-release \
+    wget \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add Groonga repository
+RUN wget https://packages.groonga.org/debian/groonga-apt-source-latest-$(lsb_release --codename --short).deb && \
+    apt install -y -V ./groonga-apt-source-latest-$(lsb_release --codename --short).deb && \
+    rm ./groonga-apt-source-latest-*.deb
+
+# Add PostgreSQL repository
+RUN wget -O /usr/share/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc && \
+    echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+
+# Install PGroonga directly
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends postgresql-17-pgdg-pgroonga && \
+    rm -rf /var/lib/apt/lists/*
+
+

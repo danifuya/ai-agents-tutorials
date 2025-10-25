@@ -1,0 +1,46 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.env
+.env.local
+.env.development
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.cursor/
+
+# Testing
+tests/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Database backups
+backups/
+*.sql
+
+# Local development
+docker-compose.override.yml
+
+commands.txt
+strucuture.txt
+decrypt_tool.py
+evaluations/
+
+scripts/
+app/scripts/
+node_modules

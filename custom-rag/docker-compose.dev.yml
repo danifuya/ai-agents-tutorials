@@ -1,0 +1,62 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    env_file:
+      - ./backend/.env.dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/app:/app/app
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    env_file:
+      - ./frontend/.env
+    volumes:
+      - ./frontend/app:/app
+      - ./frontend/public:/app/public
+    ports:
+      - 3000:3000
+
+  postgres:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.postgres
+    env_file:
+      - ./backend/.env.dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  flyway:
+    image: flyway/flyway:10
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - FLYWAY_URL=jdbc:postgresql://postgres:5432/postgres
+      - FLYWAY_USER=postgres
+      - FLYWAY_PASSWORD=dev_password_123
+      - FLYWAY_BASELINE_ON_MIGRATE=true
+      - FLYWAY_VALIDATE_ON_MIGRATE=true
+      - FLYWAY_SCHEMAS=public
+      - FLYWAY_CLEAN_DISABLED=true
+      - FLYWAY_LOCATIONS=filesystem:/flyway/migrations
+    volumes:
+      - ./backend/app/db/migrations:/flyway/migrations:ro
+    command: migrate
+
+volumes:
+  postgres_data:

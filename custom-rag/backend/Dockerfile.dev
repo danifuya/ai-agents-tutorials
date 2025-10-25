@@ -1,0 +1,39 @@
+FROM python:3.13-slim
+
+# Set working directory
+WORKDIR /app
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    ENVIRONMENT=development
+
+# Install system dependencies including PostgreSQL client libraries and curl for uv
+RUN apt-get update && apt-get install -y --no-install-recommends\
+    gcc \
+    libssl-dev \
+    libffi-dev \
+    libpq-dev \
+    postgresql-client \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+    
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/0.8.11/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+# Copy Python dependency files
+COPY pyproject.toml uv.lock* ./
+
+# Install Python dependencies with uv
+RUN uv sync --frozen
+
+# Copy the application contents
+COPY app/ ./app/
+
+# Create a non-root user
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
